@@ -12,13 +12,6 @@ def get_db():
     return g.db
 
 
-@transactions_bp.teardown_appcontext
-def close_db(error):
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
-
-
 def execute_query(query, args=()):
     return get_db().execute(query, args)
 

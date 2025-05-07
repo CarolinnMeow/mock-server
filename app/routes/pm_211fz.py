@@ -14,14 +14,6 @@ def get_db():
         g.db.row_factory = sqlite3.Row
     return g.db
 
-
-@pm_211fz_bp.teardown_appcontext
-def close_db(error):
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
-
-
 def execute_query(query, args=(), commit=False):
     db = get_db()
     cur = db.execute(query, args)

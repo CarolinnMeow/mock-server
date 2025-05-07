@@ -15,13 +15,6 @@ def get_db():
     return g.db
 
 
-@product_agreements_bp.teardown_appcontext
-def close_db(error):
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
-
-
 def execute_query(query, args=(), commit=False):
     db = get_db()
     cur = db.execute(query, args)

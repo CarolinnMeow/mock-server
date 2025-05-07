@@ -13,17 +13,31 @@ def get_db():
         g.db.row_factory = sqlite3.Row
     return g.db
 
-
-@system_bp.teardown_appcontext
-def close_db(error):
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
-
-
 def execute_query(query, args=()):
     return get_db().execute(query, args)
 
+@system_bp.route('/')
+def index():
+    return jsonify({
+        "message": "Mock Server API",
+        "version": "1.0.0",
+        "endpoints": {
+            "accounts (physical)": "/accounts-v1.3.3/",
+            "accounts (legal)": "/accounts-le-v2.0.0/",
+            "payments": "/payments-v1.3.1/",
+            "pm_211fz": "/pm-211fz-v1.3.1/",
+            "consents (physical)": "/consent-pe-v2.0.0/",
+            "consents (legal)": "/consent-le-v2.0.0/",
+            "documents (bank)": "/bank-doc-v1.0.1/",
+            "documents (insurance)": "/insurance-doc-v1.0.1/",
+            "vrp": "/vrp-v1.3.1/",
+            "transactions": "/transaction-history-v1.0.0/",
+            "medical insured": "/medical-insured-person-v3.0.3/",
+            "product agreements": "/product-agreement-consents-v1.0.1/",
+            "metrics": "/metrics",
+            "health": "/health"
+        }
+    })
 
 @system_bp.route('/simulate-errors', methods=['GET'])
 def simulate_errors():
