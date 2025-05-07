@@ -4,10 +4,13 @@ from app.routes import (
     accounts_bp, payments_bp, consents_bp, documents_bp, vrp_bp,
     transactions_bp, medical_bp, product_agreements_bp, pm_211fz_bp, system_bp
 )
+from app.db import init_app
 
 def create_app():
     app = Flask(__name__)
     Swagger(app)
+    app.config['DATABASE'] = 'mockserver.db'
+    init_app(app)
     app.register_blueprint(accounts_bp)
     app.register_blueprint(payments_bp)
     app.register_blueprint(consents_bp)
