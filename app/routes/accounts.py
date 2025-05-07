@@ -1,48 +1,167 @@
-from flask import Blueprint, jsonify, request, abort
-from app.services.data_service import data_service
+from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.account import physical_account_schema, legal_account_schema
 from jsonschema import validate
+import sqlite3
+import uuid
 
 accounts_bp = Blueprint('accounts', __name__)
+DATABASE = 'mockserver.db'
+
+
+def get_db():
+    if 'db' not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+
+@accounts_bp.teardown_appcontext
+def close_db(error):
+    if hasattr(g, 'db'):
+        g.db.close()
+
+
+def execute_query(query, args=(), commit=False):
+    conn = get_db()
+    cur = conn.execute(query, args)
+    if commit:
+        conn.commit()
+    return cur
+
+
+# Схема таблицы уже должна быть создана через schema.sql
+@accounts_bp.cli.command('init-db')
+def init_db():
+    with open('schema.sql', 'r') as f:
+        get_db().executescript(f.read())
+    print("Database initialized")
+
 
 @accounts_bp.route('/accounts-v1.3.3/', methods=['GET', 'POST'])
 def physical_accounts():
     if request.method == 'GET':
-        return jsonify(data_service.get_accounts('physical_entity'))
+        cur = execute_query('''
+            SELECT * FROM accounts 
+            WHERE type = 'physical_entity'
+        ''')
+        return jsonify([dict(row) for row in cur.fetchall()])
+
     if request.method == 'POST':
         validate(request.json, physical_account_schema)
-        account = data_service.add_account(request.json, 'physical_entity')
-        return jsonify(account), 201
+        account_id = str(uuid.uuid4())
+
+        execute_query('''
+            INSERT INTO accounts 
+            (id, balance, currency, type, status, owner)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            account_id,
+            request.json['balance'],
+            request.json['currency'],
+            'physical_entity',
+            request.json['status'],
+            request.json['owner']
+        ), commit=True)
+
+        return jsonify({"id": account_id}), 201
+
 
 @accounts_bp.route('/accounts-v1.3.3/<account_id>', methods=['GET', 'PUT', 'DELETE'])
 def physical_account(account_id):
-    account = data_service.get_account(account_id, 'physical_entity')
-    if not account:
-        abort(404)
+    if request.method == 'GET':
+        cur = execute_query('''
+            SELECT * FROM accounts 
+            WHERE id = ? AND type = 'physical_entity'
+        ''', (account_id,))
+        account = cur.fetchone()
+        return jsonify(dict(account)) if account else abort(404)
+
     if request.method == 'PUT':
-        account.update(request.json)
-    elif request.method == 'DELETE':
-        data_service.delete_account(account_id, 'physical_entity')
+        validate(request.json, physical_account_schema)
+        execute_query('''
+            UPDATE accounts SET
+            balance = ?, 
+            currency = ?,
+            status = ?,
+            owner = ?
+            WHERE id = ? AND type = 'physical_entity'
+        ''', (
+            request.json['balance'],
+            request.json['currency'],
+            request.json['status'],
+            request.json['owner'],
+            account_id
+        ), commit=True)
+        return jsonify({"status": "updated"})
+
+    if request.method == 'DELETE':
+        execute_query('''
+            DELETE FROM accounts 
+            WHERE id = ? AND type = 'physical_entity'
+        ''', (account_id,), commit=True)
         return '', 204
-    return jsonify(account)
+
 
 @accounts_bp.route('/accounts-le-v2.0.0/', methods=['GET', 'POST'])
 def legal_accounts():
     if request.method == 'GET':
-        return jsonify(data_service.get_accounts('legal_entity'))
+        cur = execute_query('''
+            SELECT * FROM accounts 
+            WHERE type = 'legal_entity'
+        ''')
+        return jsonify([dict(row) for row in cur.fetchall()])
+
     if request.method == 'POST':
         validate(request.json, legal_account_schema)
-        account = data_service.add_account(request.json, 'legal_entity')
-        return jsonify(account), 201
+        account_id = str(uuid.uuid4())
+
+        execute_query('''
+            INSERT INTO accounts 
+            (id, balance, currency, type, status, company)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            account_id,
+            request.json['balance'],
+            request.json['currency'],
+            'legal_entity',
+            request.json['status'],
+            request.json['company']
+        ), commit=True)
+
+        return jsonify({"id": account_id}), 201
+
 
 @accounts_bp.route('/accounts-le-v2.0.0/<account_id>', methods=['GET', 'PUT', 'DELETE'])
 def legal_account(account_id):
-    account = data_service.get_account(account_id, 'legal_entity')
-    if not account:
-        abort(404)
+    if request.method == 'GET':
+        cur = execute_query('''
+            SELECT * FROM accounts 
+            WHERE id = ? AND type = 'legal_entity'
+        ''', (account_id,))
+        account = cur.fetchone()
+        return jsonify(dict(account)) if account else abort(404)
+
     if request.method == 'PUT':
-        account.update(request.json)
-    elif request.method == 'DELETE':
-        data_service.delete_account(account_id, 'legal_entity')
+        validate(request.json, legal_account_schema)
+        execute_query('''
+            UPDATE accounts SET
+            balance = ?, 
+            currency = ?,
+            status = ?,
+            company = ?
+            WHERE id = ? AND type = 'legal_entity'
+        ''', (
+            request.json['balance'],
+            request.json['currency'],
+            request.json['status'],
+            request.json['company'],
+            account_id
+        ), commit=True)
+        return jsonify({"status": "updated"})
+
+    if request.method == 'DELETE':
+        execute_query('''
+            DELETE FROM accounts 
+            WHERE id = ? AND type = 'legal_entity'
+        ''', (account_id,), commit=True)
         return '', 204
-    return jsonify(account)

@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, g
 from flasgger import Swagger
 from app.routes import (
     accounts_bp, payments_bp, consents_bp, documents_bp, vrp_bp,
@@ -19,3 +19,4 @@ def create_app():
     app.register_blueprint(pm_211fz_bp)
     app.register_blueprint(system_bp)
     return app
+

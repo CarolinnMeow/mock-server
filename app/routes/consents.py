@@ -1,10 +1,31 @@
-from flask import Blueprint, jsonify, request, abort
-from app.services.data_service import data_service
+from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.consent import consent_schema
 from jsonschema import validate
+import sqlite3
 import uuid
+import json
 
 consents_bp = Blueprint('consents', __name__)
+DATABASE = 'mockserver.db'
+
+def get_db():
+    if 'db' not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+@consents_bp.teardown_appcontext
+def close_db(error):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
+
+def execute_query(query, args=(), commit=False):
+    db = get_db()
+    cur = db.execute(query, args)
+    if commit:
+        db.commit()
+    return cur
 
 @consents_bp.route('/consent-pe-v2.0.0/', methods=['POST'])
 def create_pe_consent():
@@ -16,7 +37,17 @@ def create_pe_consent():
         "status": "ACTIVE",
         **request.json
     }
-    data_service.add_consent(consent)
+    execute_query(
+        '''INSERT INTO consents (id, type, status, tpp_id, permissions) VALUES (?, ?, ?, ?, ?)''',
+        (
+            consent_id,
+            "physical_entity",
+            "ACTIVE",
+            consent.get('tpp_id'),
+            json.dumps(consent.get('permissions', []))
+        ),
+        commit=True
+    )
     return jsonify(consent), 201
 
 @consents_bp.route('/consent-le-v2.0.0/', methods=['POST'])
@@ -29,29 +60,93 @@ def create_le_consent():
         "status": "ACTIVE",
         **request.json
     }
-    data_service.add_consent(consent)
+    execute_query(
+        '''INSERT INTO consents (id, type, status, tpp_id, permissions) VALUES (?, ?, ?, ?, ?)''',
+        (
+            consent_id,
+            "legal_entity",
+            "ACTIVE",
+            consent.get('tpp_id'),
+            json.dumps(consent.get('permissions', []))
+        ),
+        commit=True
+    )
     return jsonify(consent), 201
 
 @consents_bp.route('/consent-pe-v2.0.0/<consent_id>', methods=['GET', 'PUT', 'DELETE'])
 def pe_consent(consent_id):
-    consent = data_service.get_consent(consent_id, 'physical_entity')
+    cur = execute_query(
+        'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'physical_entity')
+    )
+    consent = cur.fetchone()
     if not consent:
         abort(404)
     if request.method == 'PUT':
-        consent.update(request.json)
+        # Обновляем только разрешённые поля
+        fields = []
+        values = []
+        for key in ['status', 'tpp_id', 'permissions']:
+            if key in request.json:
+                fields.append(f"{key} = ?")
+                val = request.json[key]
+                if key == 'permissions':
+                    val = json.dumps(val)
+                values.append(val)
+        if fields:
+            values.extend([consent_id, 'physical_entity'])
+            execute_query(
+                f"UPDATE consents SET {', '.join(fields)} WHERE id = ? AND type = ?",
+                values,
+                commit=True
+            )
+        cur = execute_query(
+            'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'physical_entity')
+        )
+        consent = cur.fetchone()
     elif request.method == 'DELETE':
-        data_service.delete_consent(consent_id)
+        execute_query(
+            'DELETE FROM consents WHERE id = ? AND type = ?', (consent_id, 'physical_entity'), commit=True
+        )
         return '', 204
-    return jsonify(consent)
+    # Преобразуем permissions обратно в список
+    result = dict(consent)
+    result['permissions'] = json.loads(result['permissions']) if result['permissions'] else []
+    return jsonify(result)
 
 @consents_bp.route('/consent-le-v2.0.0/<consent_id>', methods=['GET', 'PUT', 'DELETE'])
 def le_consent(consent_id):
-    consent = data_service.get_consent(consent_id, 'legal_entity')
+    cur = execute_query(
+        'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'legal_entity')
+    )
+    consent = cur.fetchone()
     if not consent:
         abort(404)
     if request.method == 'PUT':
-        consent.update(request.json)
+        fields = []
+        values = []
+        for key in ['status', 'tpp_id', 'permissions']:
+            if key in request.json:
+                fields.append(f"{key} = ?")
+                val = request.json[key]
+                if key == 'permissions':
+                    val = json.dumps(val)
+                values.append(val)
+        if fields:
+            values.extend([consent_id, 'legal_entity'])
+            execute_query(
+                f"UPDATE consents SET {', '.join(fields)} WHERE id = ? AND type = ?",
+                values,
+                commit=True
+            )
+        cur = execute_query(
+            'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'legal_entity')
+        )
+        consent = cur.fetchone()
     elif request.method == 'DELETE':
-        data_service.delete_consent(consent_id)
+        execute_query(
+            'DELETE FROM consents WHERE id = ? AND type = ?', (consent_id, 'legal_entity'), commit=True
+        )
         return '', 204
-    return jsonify(consent)
+    result = dict(consent)
+    result['permissions'] = json.loads(result['permissions']) if result['permissions'] else []
+    return jsonify(result)
