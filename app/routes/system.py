@@ -1,20 +1,11 @@
 from flask import Blueprint, jsonify, request, abort, g
 from datetime import datetime
 import psutil
-import sqlite3
+from app.db import get_db, execute_query
 
 system_bp = Blueprint('system', __name__)
 DATABASE = 'mockserver.db'
 
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-def execute_query(query, args=()):
-    return get_db().execute(query, args)
 
 @system_bp.route('/')
 def index():

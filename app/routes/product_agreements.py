@@ -1,26 +1,11 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.product_agreement import product_agreement_schema
 from jsonschema import validate
-import sqlite3
+from app.db import get_db, execute_query
 import uuid
 
 product_agreements_bp = Blueprint('product_agreements', __name__)
 DATABASE = 'mockserver.db'
-
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-
-def execute_query(query, args=(), commit=False):
-    db = get_db()
-    cur = db.execute(query, args)
-    if commit:
-        db.commit()
-    return cur
 
 
 @product_agreements_bp.route('/product-agreement-consents-v1.0.1/', methods=['GET', 'POST'])

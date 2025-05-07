@@ -1,19 +1,8 @@
 from flask import Blueprint, jsonify, request, abort, g
-import sqlite3
+from app.db import get_db, execute_query
 
 transactions_bp = Blueprint('transactions', __name__)
 DATABASE = 'mockserver.db'
-
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-
-def execute_query(query, args=()):
-    return get_db().execute(query, args)
 
 
 @transactions_bp.route('/transaction-history-v1.0.0/', methods=['GET'])

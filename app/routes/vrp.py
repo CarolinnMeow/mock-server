@@ -1,26 +1,11 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.vrp import vrp_schema
 from jsonschema import validate
-import sqlite3
+from app.db import get_db, execute_query
 import uuid
 
 vrp_bp = Blueprint('vrp', __name__)
 DATABASE = 'mockserver.db'
-
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-def execute_query(query, args=(), commit=False):
-    db = get_db()
-    cur = db.execute(query, args)
-    if commit:
-        db.commit()
-    return cur
-
 
 @vrp_bp.route('/vrp-v1.3.1/', methods=['GET', 'POST'])
 def vrp_operations():

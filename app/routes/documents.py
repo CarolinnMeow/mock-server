@@ -1,24 +1,11 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.document import bank_doc_schema, insurance_doc_schema
 from jsonschema import validate
-import sqlite3
+from app.db import get_db, execute_query
 import uuid
 
 documents_bp = Blueprint('documents', __name__)
 DATABASE = 'mockserver.db'
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-def execute_query(query, args=(), commit=False):
-    db = get_db()
-    cur = db.execute(query, args)
-    if commit:
-        db.commit()
-    return cur
 
 @documents_bp.route('/bank-doc-v1.0.1/', methods=['GET', 'POST'])
 def bank_docs():

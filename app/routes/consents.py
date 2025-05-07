@@ -1,25 +1,12 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.consent import consent_schema
 from jsonschema import validate
-import sqlite3
+from app.db import get_db, execute_query
 import uuid
 import json
 
 consents_bp = Blueprint('consents', __name__)
 DATABASE = 'mockserver.db'
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-def execute_query(query, args=(), commit=False):
-    db = get_db()
-    cur = db.execute(query, args)
-    if commit:
-        db.commit()
-    return cur
 
 @consents_bp.route('/consent-pe-v2.0.0/', methods=['POST'])
 def create_pe_consent():

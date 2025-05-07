@@ -1,25 +1,12 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.payment import payment_schema
 from jsonschema import validate
-import sqlite3
+from app.db import get_db, execute_query
 import uuid
 from datetime import datetime
 
 payments_bp = Blueprint('payments', __name__)
 DATABASE = 'mockserver.db'
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-def execute_query(query, args=(), commit=False):
-    db = get_db()
-    cur = db.execute(query, args)
-    if commit:
-        db.commit()
-    return cur
 
 @payments_bp.route('/payments-v1.3.1/', methods=['POST'])
 def create_payment():

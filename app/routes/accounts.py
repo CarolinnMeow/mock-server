@@ -1,34 +1,11 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.account import physical_account_schema, legal_account_schema
 from jsonschema import validate
-import sqlite3
+from app.db import get_db, execute_query
 import uuid
 
 accounts_bp = Blueprint('accounts', __name__)
 DATABASE = 'mockserver.db'
-
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(DATABASE)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-def execute_query(query, args=(), commit=False):
-    conn = get_db()
-    cur = conn.execute(query, args)
-    if commit:
-        conn.commit()
-    return cur
-
-
-# Схема таблицы уже должна быть создана через schema.sql
-@accounts_bp.cli.command('init-db')
-def init_db():
-    with open('schema.sql', 'r') as f:
-        get_db().executescript(f.read())
-    print("Database initialized")
-
 
 @accounts_bp.route('/accounts-v1.3.3/', methods=['GET', 'POST'])
 def physical_accounts():
