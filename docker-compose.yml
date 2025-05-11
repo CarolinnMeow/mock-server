@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/usr/src/app/data  # Для сохранения базы данных между перезапусками
+      - .:/usr/src/app            # Для синхронизации кода (удобно для разработки)
+    environment:
+      - FLASK_APP=main.py
+      - FLASK_ENV=development

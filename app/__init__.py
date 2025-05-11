@@ -9,7 +9,7 @@ from app.db import init_app
 def create_app():
     app = Flask(__name__)
     Swagger(app)
-    app.config['DATABASE'] = 'mockserver.db'
+    app.config['DATABASE'] = '/usr/src/app/data/mockserver.db'
     init_app(app)
     app.register_blueprint(accounts_bp)
     app.register_blueprint(payments_bp)
