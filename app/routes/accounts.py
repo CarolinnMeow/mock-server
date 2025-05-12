@@ -1,11 +1,13 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.account import physical_account_schema, legal_account_schema
 from jsonschema import validate
+from jsonschema.exceptions import ValidationError
 from app.db import execute_query
 import uuid
 
 accounts_bp = Blueprint('accounts', __name__)
 DATABASE = 'mockserver.db'
+
 
 @accounts_bp.route('/accounts-v1.3.3/', methods=['GET', 'POST'])
 def physical_accounts():
@@ -17,26 +19,34 @@ def physical_accounts():
         return jsonify([dict(row) for row in cur.fetchall()])
 
     if request.method == 'POST':
-        validate(request.json, physical_account_schema)
-        account_id = str(uuid.uuid4())
+        try:
+            validate(request.json, physical_account_schema)
+        except ValidationError as e:
+            return jsonify({"error": "Validation error", "message": str(e)}), 400
 
-        execute_query('''
-            INSERT INTO accounts 
+        account_id = str(uuid.uuid4())
+        execute_query(
+            '''
+            INSERT INTO accounts
             (id, balance, currency, type, status, owner)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (
-            account_id,
-            request.json['balance'],
-            request.json['currency'],
-            'physical_entity',
-            request.json['status'],
-            request.json['owner']
-        ), commit=True)
-
-        # Возвращаем всю строку
+            ''',
+            (
+                account_id,
+                request.json['balance'],
+                request.json['currency'],
+                'physical_entity',
+                request.json['status'],
+                request.json['owner']
+            ),
+            commit=True
+        )
         cur = execute_query('SELECT * FROM accounts WHERE id = ?', (account_id,))
         account = dict(cur.fetchone())
         return jsonify(account), 201
+
+    # Явно возвращаем ошибку для неподдерживаемого метода
+    return jsonify({"error": "Method not allowed"}), 405
 
 
 @accounts_bp.route('/accounts-v1.3.3/<account_id>', methods=['GET', 'PUT', 'DELETE'])

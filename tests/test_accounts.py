@@ -37,3 +37,12 @@ def test_create_physical_account(client):
     assert "id" in resp_json
     assert "status" in resp_json
     assert resp_json["status"] == "active"
+
+def test_create_account_missing_owner(client):
+    data = {
+        "balance": 1000,
+        "currency": "RUB",
+        "status": "active"
+    }
+    response = client.post('/accounts-v1.3.3/', json=data)
+    assert response.status_code == 400
