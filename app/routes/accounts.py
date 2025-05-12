@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.account import physical_account_schema, legal_account_schema
 from jsonschema import validate
-from app.db import get_db, execute_query
+from app.db import execute_query
 import uuid
 
 accounts_bp = Blueprint('accounts', __name__)

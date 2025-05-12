@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, abort, g
 from datetime import datetime
 import psutil
-from app.db import get_db, execute_query
+from app.db import execute_query
 
 system_bp = Blueprint('system', __name__)
 DATABASE = 'mockserver.db'

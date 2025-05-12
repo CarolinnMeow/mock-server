@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.product_agreement import product_agreement_schema
 from jsonschema import validate
-from app.db import get_db, execute_query
+from app.db import execute_query
 import uuid
 import json
 

@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, abort, g
-from app.db import get_db, execute_query
+from app.db import execute_query
 
 transactions_bp = Blueprint('transactions', __name__)
 DATABASE = 'mockserver.db'

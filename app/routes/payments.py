@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.payment import payment_schema
 from jsonschema import validate
-from app.db import get_db, execute_query
+from app.db import execute_query
 import uuid
 from datetime import datetime
 
@@ -23,7 +23,7 @@ def create_payment():
             request.json['amount'],
             request.json['currency'],
             request.json['recipient'],
-            request.json['account_id']  
+            request.json['account_id']
         ),
         commit=True
     )

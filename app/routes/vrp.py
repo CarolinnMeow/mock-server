@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.vrp import vrp_schema
 from jsonschema import validate
-from app.db import get_db, execute_query
+from app.db import execute_query
 import uuid
 
 vrp_bp = Blueprint('vrp', __name__)
