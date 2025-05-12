@@ -13,13 +13,14 @@ def bank_docs():
         validate(request.json, bank_doc_schema)
         doc_id = str(uuid.uuid4())
         execute_query(
-            '''INSERT INTO bank_docs (id, type, content, signature, created_at)
-               VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)''',
+            '''INSERT INTO bank_docs (id, type, content, signature, created_at, account_id)
+               VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)''',
             (
                 doc_id,
                 request.json['type'],
                 request.json['content'],
-                request.json['signature']
+                request.json['signature'],
+                request.json['account_id']  # <-- добавлено!
             ),
             commit=True
         )
@@ -30,6 +31,7 @@ def bank_docs():
         cur = execute_query('SELECT * FROM bank_docs')
         docs = [dict(row) for row in cur.fetchall()]
         return jsonify(docs)
+
 
 @documents_bp.route('/bank-doc-v1.0.1/<doc_id>', methods=['GET', 'PUT', 'DELETE'])
 def bank_doc(doc_id):

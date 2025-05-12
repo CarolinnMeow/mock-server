@@ -20,14 +20,21 @@ def execute_query(query, args=(), commit=False):
         db.commit()
     return cur
 
-def init_db():
-    db = get_db()
+def init_db(db=None, db_path=None):
+    if db is None and db_path is not None:
+        import sqlite3
+        db = sqlite3.connect(db_path)
+        close = True
+    else:
+        close = False
     try:
         with open('schema.sql', 'r', encoding='utf-8') as f:
             db.executescript(f.read())
     except FileNotFoundError:
         print("Ошибка: файл schema.sql не найден в корне проекта!")
         exit(1)
+    if close:
+        db.close()
 
 @click.command('init-db')
 def init_db_command():

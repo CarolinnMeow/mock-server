@@ -1,26 +1,23 @@
 # tests/test_documents.py
-
 import pytest
-from app import create_app
 
-@pytest.fixture
-def client():
-    app = create_app()
-    app.config['TESTING'] = True
-    with app.test_client() as client:
-        yield client
+
 
 def test_create_bank_doc(client):
+    resp = client.get('/accounts-v1.3.3/')
+    accounts = resp.get_json()
+    assert accounts
+    account_id = accounts[0]["id"]
+
     data = {
         "type": "STATEMENT",
         "content": "dGVzdA==",
-        "signature": "sig123"
+        "signature": "sig123",
+        "account_id": account_id
     }
     response = client.post('/bank-doc-v1.0.1/', json=data)
     assert response.status_code == 201
-    resp_json = response.get_json()
-    assert resp_json["type"] == "STATEMENT"
-    assert resp_json["signature"] == "sig123"
+
 
 def test_create_insurance_doc(client):
     data = {

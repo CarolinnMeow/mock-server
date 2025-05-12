@@ -14,10 +14,13 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS payments (
     id TEXT PRIMARY KEY,
     status TEXT NOT NULL CHECK(status IN ('PENDING', 'COMPLETED', 'REJECTED')),
+    type TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     amount REAL NOT NULL CHECK(amount > 0),
     currency TEXT NOT NULL CHECK(currency IN ('RUB', 'USD', 'EUR')),
     recipient TEXT NOT NULL,
+    purpose TEXT,
+    budget_code TEXT,
     account_id TEXT NOT NULL,
     FOREIGN KEY (account_id) REFERENCES accounts(id)
 );

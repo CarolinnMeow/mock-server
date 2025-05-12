@@ -33,7 +33,10 @@ def physical_accounts():
             request.json['owner']
         ), commit=True)
 
-        return jsonify({"id": account_id}), 201
+        # Возвращаем всю строку
+        cur = execute_query('SELECT * FROM accounts WHERE id = ?', (account_id,))
+        account = dict(cur.fetchone())
+        return jsonify(account), 201
 
 
 @accounts_bp.route('/accounts-v1.3.3/<account_id>', methods=['GET', 'PUT', 'DELETE'])

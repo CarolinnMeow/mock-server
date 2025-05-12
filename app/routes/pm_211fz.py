@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.pm_211fz import pm_211fz_schema
 from jsonschema import validate
-from app.db import get_db, execute_query
+from app.db import execute_query
 import uuid
 
 pm_211fz_bp = Blueprint('pm_211fz', __name__)
@@ -14,24 +14,29 @@ def pm_211fz():
         payment_id = str(uuid.uuid4())
         execute_query(
             '''INSERT INTO payments 
-            (id, status, type, amount, currency, recipient, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)''',
+            (id, status, type, amount, currency, recipient, purpose, budget_code, created_at, account_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)''',
             (
                 payment_id,
-                "PROCESSING",
+                "PENDING",
                 "pm_211fz",
                 request.json['amount'],
                 request.json['currency'],
-                request.json['recipient']
+                request.json['recipient'],
+                request.json['purpose'],
+                request.json['budget_code'],
+                request.json['account_id']   # <-- добавлено!
             ),
             commit=True
         )
         cur = execute_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
         return jsonify(dict(cur.fetchone())), 201
 
+    # GET-запрос - без изменений
     cur = execute_query('SELECT * FROM payments WHERE type = ?', ('pm_211fz',))
     payments = [dict(row) for row in cur.fetchall()]
     return jsonify(payments)
+
 
 
 @pm_211fz_bp.route('/pm-211fz-v1.3.1/<payment_id>', methods=['GET', 'PUT', 'DELETE'])

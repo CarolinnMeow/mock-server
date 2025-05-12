@@ -5,11 +5,16 @@ from app.routes import (
     transactions_bp, medical_bp, product_agreements_bp, pm_211fz_bp, system_bp
 )
 from app.db import init_app
+from app.services.data_service import DataService
 
-def create_app():
+
+def create_app(config_class=None):
     app = Flask(__name__)
+    if config_class is None:
+        from app.config import Config
+        config_class = Config
+    app.config.from_object(config_class)
     Swagger(app)
-    app.config['DATABASE'] = '/usr/src/app/data/mockserver.db'
     init_app(app)
     app.register_blueprint(accounts_bp)
     app.register_blueprint(payments_bp)

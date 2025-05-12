@@ -1,5 +1,6 @@
 from faker import Faker
 import base64
+import sqlite3
 from datetime import datetime
 
 fake = Faker('ru_RU')
@@ -81,7 +82,25 @@ class DataService:
                 "valid_until": fake.future_date(end_date='+3y').isoformat()
             }
 
-    # Методы для всех сущностей (пример для accounts, payments, consents, и т.д.)
+    # Методы для всех сущностей
+    def save_to_db(self, db_path):
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        # Сохраняем аккаунты
+        for acc in self.get_accounts('physical_entity') + self.get_accounts('legal_entity'):
+            cur.execute(
+                "INSERT INTO accounts (id, balance, currency, type, status, owner, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (acc["id"], acc["balance"], acc["currency"], acc["type"], acc["status"], acc.get("owner", ""),
+                 acc.get("created_at", ""))
+            )
+        # Сохраняем платежи
+        for p in self.get_payments():
+            cur.execute(
+                "INSERT INTO payments (id, status, created_at, amount, currency, recipient, account_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (p["id"], p["status"], p["created_at"], p["amount"], p["currency"], p["recipient"], p["account_id"])
+            )
+        conn.commit()
+        conn.close()
     def get_accounts(self, acc_type):
         return [acc for acc in self.data['accounts'] if acc['type'] == acc_type]
 

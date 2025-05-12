@@ -14,21 +14,23 @@ def create_payment():
     payment_id = str(uuid.uuid4())
     created_at = datetime.now().isoformat()
     execute_query(
-        '''INSERT INTO payments (id, status, created_at, amount, currency, recipient)
-           VALUES (?, ?, ?, ?, ?, ?)''',
+        '''INSERT INTO payments (id, status, created_at, amount, currency, recipient, account_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)''',
         (
             payment_id,
             "PENDING",
             created_at,
             request.json['amount'],
             request.json['currency'],
-            request.json['recipient']
+            request.json['recipient'],
+            request.json['account_id']  
         ),
         commit=True
     )
     cur = execute_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
     payment = dict(cur.fetchone())
     return jsonify(payment), 201
+
 
 @payments_bp.route('/payments-v1.3.1/<payment_id>', methods=['GET', 'PUT', 'DELETE'])
 def payment_operations(payment_id):

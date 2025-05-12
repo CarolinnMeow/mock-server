@@ -3,25 +3,25 @@ from app.schemas.product_agreement import product_agreement_schema
 from jsonschema import validate
 from app.db import get_db, execute_query
 import uuid
+import json
 
 product_agreements_bp = Blueprint('product_agreements', __name__)
 DATABASE = 'mockserver.db'
-
 
 @product_agreements_bp.route('/product-agreement-consents-v1.0.1/', methods=['GET', 'POST'])
 def product_agreements():
     if request.method == 'POST':
         validate(request.json, product_agreement_schema)
         agreement_id = str(uuid.uuid4())
+        terms_str = json.dumps(request.json['terms'])
         execute_query(
-            '''INSERT INTO product_agreements 
-            (id, status, product_type, terms) 
-            VALUES (?, ?, ?, ?)''',
+            '''INSERT INTO product_agreements (id, product_type, terms, status)
+               VALUES (?, ?, ?, ?)''',
             (
                 agreement_id,
-                "PENDING",
                 request.json['product_type'],
-                request.json['terms']
+                terms_str,
+                "ACTIVE"
             ),
             commit=True
         )
