@@ -33,7 +33,9 @@ CREATE TABLE IF NOT EXISTS consents (
     tpp_id TEXT NOT NULL,
     permissions TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    account_id TEXT NOT NULL,
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 
 
@@ -70,12 +72,13 @@ CREATE TABLE IF NOT EXISTS bank_docs (
 
 
 CREATE TABLE IF NOT EXISTS insurance_docs (
-    id TEXT PRIMARY KEY,
+     id TEXT PRIMARY KEY,
     type TEXT NOT NULL CHECK(type IN ('POLICY', 'CLAIM', 'AGREEMENT')),
     content TEXT NOT NULL,
     policy_number TEXT NOT NULL,
     valid_until DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (policy_number) REFERENCES medical_insured(policy_number)
 );
 
 CREATE TABLE IF NOT EXISTS product_agreements (
@@ -83,7 +86,9 @@ CREATE TABLE IF NOT EXISTS product_agreements (
     status TEXT NOT NULL CHECK(status IN ('PENDING', 'ACTIVE', 'REJECTED')),
     product_type TEXT NOT NULL CHECK(product_type IN ('LOAN', 'DEPOSIT', 'INSURANCE')),
     terms TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    account_id TEXT NOT NULL,
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 
 

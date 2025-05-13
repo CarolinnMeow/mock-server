@@ -21,12 +21,15 @@ def execute_query(query, args=(), commit=False):
     return cur
 
 def init_db(db=None, db_path=None):
-    if db is None and db_path is not None:
-        import sqlite3
-        db = sqlite3.connect(db_path)
-        close = True
-    else:
-        close = False
+    close = False
+    if db is None:
+        if db_path is not None:
+            db = sqlite3.connect(db_path)
+            close = True
+        else:
+            # Получаем путь к базе из Flask config
+            db = sqlite3.connect(current_app.config['DATABASE'])
+            close = True
     try:
         with open('schema.sql', 'r', encoding='utf-8') as f:
             db.executescript(f.read())
@@ -35,6 +38,7 @@ def init_db(db=None, db_path=None):
         exit(1)
     if close:
         db.close()
+
 
 @click.command('init-db')
 def init_db_command():
