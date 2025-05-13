@@ -7,3 +7,5 @@ payment_schema = {
     },
     "required": ["amount", "currency", "recipient"]
 }
+
+

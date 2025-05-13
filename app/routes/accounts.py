@@ -2,12 +2,14 @@ from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.account import physical_account_schema, legal_account_schema
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
+from flasgger import Swagger, swag_from
 from app.db import execute_query
 import uuid
 
 accounts_bp = Blueprint('accounts', __name__)
 DATABASE = 'mockserver.db'
 
+@swag_from('../docs/accounts_post.yml')
 
 @accounts_bp.route('/accounts-v1.3.3/', methods=['GET', 'POST'])
 def physical_accounts():
