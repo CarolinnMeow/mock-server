@@ -35,6 +35,7 @@ def create_pe_consent():
     return jsonify(consent), 201
 
 @consents_bp.route('/consent-le-v2.0.0/', methods=['POST'])
+@swag_from('../docs/consents.yml')
 def create_le_consent():
     validate(request.json, consent_schema)
     consent_id = str(uuid.uuid4())
@@ -58,6 +59,7 @@ def create_le_consent():
     return jsonify(consent), 201
 
 @consents_bp.route('/consent-pe-v2.0.0/<consent_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/consents.yml')
 def pe_consent(consent_id):
     cur = execute_query(
         'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'physical_entity')
@@ -98,6 +100,7 @@ def pe_consent(consent_id):
     return jsonify(result)
 
 @consents_bp.route('/consent-le-v2.0.0/<consent_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/consents.yml')
 def le_consent(consent_id):
     cur = execute_query(
         'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'legal_entity')

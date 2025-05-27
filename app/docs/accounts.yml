@@ -137,4 +137,38 @@ paths:
       parameters:
         - in: path
           name: account_id
-
+    put:
+        tags: [Accounts]
+        summary: Обновить счет юридического лица
+        consumes:
+          - application/json
+        parameters:
+          - in: path
+            name: account_id
+            required: true
+            type: string
+          - in: body
+            name: body
+            required: true
+            schema:
+              $ref: '#/definitions/LegalAccountInput'
+        responses:
+          200:
+            description: Счет обновлен
+          400:
+            description: Ошибка валидации данных
+          404:
+            description: Счет не найден
+    delete:
+        tags: [Accounts]
+        summary: Удалить счет юридического лица
+        parameters:
+          - in: path
+            name: account_id
+            required: true
+            type: string
+        responses:
+          204:
+            description: Счет удален
+          404:
+            description: Счет не найден

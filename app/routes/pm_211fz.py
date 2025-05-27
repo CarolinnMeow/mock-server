@@ -43,6 +43,7 @@ def pm_211fz():
 
 
 @pm_211fz_bp.route('/pm-211fz-v1.3.1/<payment_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/pm_211fz.yml')
 def single_pm_211fz(payment_id):
     cur = execute_query(
         'SELECT * FROM payments WHERE id = ? AND type = ?',

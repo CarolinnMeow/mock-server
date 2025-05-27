@@ -36,6 +36,7 @@ def create_payment():
 
 
 @payments_bp.route('/payments-v1.3.1/<payment_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/payments.yml')
 def payment_operations(payment_id):
     cur = execute_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
     payment = cur.fetchone()

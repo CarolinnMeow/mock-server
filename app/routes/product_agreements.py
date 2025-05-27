@@ -40,6 +40,7 @@ def product_agreements():
 
 
 @product_agreements_bp.route('/product-agreement-consents-v1.0.1/<agreement_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/product_agreements.yml')
 def single_product_agreement(agreement_id):
     cur = execute_query(
         'SELECT * FROM product_agreements WHERE id = ?',

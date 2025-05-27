@@ -52,6 +52,7 @@ def physical_accounts():
 
 
 @accounts_bp.route('/accounts-v1.3.3/<account_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/accounts.yml')
 def physical_account(account_id):
     if request.method == 'GET':
         cur = execute_query('''
@@ -88,6 +89,7 @@ def physical_account(account_id):
 
 
 @accounts_bp.route('/accounts-le-v2.0.0/', methods=['GET', 'POST'])
+@swag_from('../docs/accounts.yml')
 def legal_accounts():
     if request.method == 'GET':
         cur = execute_query('''
@@ -117,6 +119,7 @@ def legal_accounts():
 
 
 @accounts_bp.route('/accounts-le-v2.0.0/<account_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/accounts.yml')
 def legal_account(account_id):
     if request.method == 'GET':
         cur = execute_query('''

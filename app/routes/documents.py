@@ -37,6 +37,7 @@ def bank_docs():
 
 
 @documents_bp.route('/bank-doc-v1.0.1/<doc_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/documents.yml')
 def bank_doc(doc_id):
     cur = execute_query('SELECT * FROM bank_docs WHERE id = ?', (doc_id,))
     doc = cur.fetchone()
@@ -62,6 +63,7 @@ def bank_doc(doc_id):
     return jsonify(dict(doc))
 
 @documents_bp.route('/insurance-doc-v1.0.1/', methods=['GET', 'POST'])
+@swag_from('../docs/documents.yml')
 def insurance_docs():
     if request.method == 'POST':
         validate(request.json, insurance_doc_schema)
@@ -87,6 +89,7 @@ def insurance_docs():
         return jsonify(docs)
 
 @documents_bp.route('/insurance-doc-v1.0.1/<doc_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/documents.yml')
 def insurance_doc(doc_id):
     cur = execute_query('SELECT * FROM insurance_docs WHERE id = ?', (doc_id,))
     doc = cur.fetchone()

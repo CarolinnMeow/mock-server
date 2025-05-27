@@ -29,6 +29,7 @@ def transactions():
 
 
 @transactions_bp.route('/transaction-history-v1.0.0/<tx_id>', methods=['GET'])
+@swag_from('../docs/transactions.yml')
 def single_transaction(tx_id):
     cur = execute_query(
         'SELECT * FROM transactions WHERE id = ?',

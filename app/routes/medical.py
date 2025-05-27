@@ -40,6 +40,7 @@ def medical_insured():
 
 
 @medical_bp.route('/medical-insured-person-v3.0.3/<person_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/medical_insured.yml')
 def single_medical_insured(person_id):
     cur = execute_query(
         'SELECT * FROM medical_insured WHERE id = ?',

@@ -38,6 +38,7 @@ def vrp_operations():
 
 
 @vrp_bp.route('/vrp-v1.3.1/<vrp_id>', methods=['GET', 'PUT', 'DELETE'])
+@swag_from('../docs/vrp.yml')
 def single_vrp(vrp_id):
     cur = execute_query('SELECT * FROM vrps WHERE id = ?', (vrp_id,))
     vrp = cur.fetchone()
