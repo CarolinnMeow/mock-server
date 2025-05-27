@@ -1,0 +1,245 @@
+swagger: "2.0"
+info:
+  title: Consents API
+  description: API для управления согласиями физических и юридических лиц
+  version: "1.0"
+tags:
+  - name: Consents
+    description: Операции с согласиями
+
+paths:
+  /consent-pe-v2.0.0/:
+    post:
+      tags:
+        - Consents
+      summary: Создать согласие для физического лица
+      description: Создаёт новый объект consent типа physical_entity.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - tpp_id
+              - permissions
+            properties:
+              tpp_id:
+                type: string
+                description: Идентификатор TPP (Third Party Provider)
+              permissions:
+                type: array
+                items:
+                  type: string
+                description: Список разрешений
+      responses:
+        201:
+          description: Согласие успешно создано
+          schema:
+            $ref: '#/definitions/Consent'
+        400:
+          description: Ошибка валидации данных
+
+  /consent-le-v2.0.0/:
+    post:
+      tags:
+        - Consents
+      summary: Создать согласие для юридического лица
+      description: Создаёт новый объект consent типа legal_entity.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - tpp_id
+              - permissions
+            properties:
+              tpp_id:
+                type: string
+                description: Идентификатор TPP (Third Party Provider)
+              permissions:
+                type: array
+                items:
+                  type: string
+                description: Список разрешений
+      responses:
+        201:
+          description: Согласие успешно создано
+          schema:
+            $ref: '#/definitions/Consent'
+        400:
+          description: Ошибка валидации данных
+
+  /consent-pe-v2.0.0/{consent_id}:
+    get:
+      tags:
+        - Consents
+      summary: Получить согласие физического лица по ID
+      parameters:
+        - in: path
+          name: consent_id
+          required: true
+          type: string
+          description: Идентификатор согласия
+      responses:
+        200:
+          description: Согласие найдено
+          schema:
+            $ref: '#/definitions/Consent'
+        404:
+          description: Согласие не найдено
+
+    put:
+      tags:
+        - Consents
+      summary: Обновить согласие физического лица
+      parameters:
+        - in: path
+          name: consent_id
+          required: true
+          type: string
+          description: Идентификатор согласия
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [ACTIVE, REVOKED, EXPIRED]
+              tpp_id:
+                type: string
+              permissions:
+                type: array
+                items:
+                  type: string
+      responses:
+        200:
+          description: Согласие обновлено
+          schema:
+            $ref: '#/definitions/Consent'
+        400:
+          description: Ошибка валидации данных
+        404:
+          description: Согласие не найдено
+
+    delete:
+      tags:
+        - Consents
+      summary: Удалить согласие физического лица
+      parameters:
+        - in: path
+          name: consent_id
+          required: true
+          type: string
+          description: Идентификатор согласия
+      responses:
+        204:
+          description: Согласие удалено
+        404:
+          description: Согласие не найдено
+
+  /consent-le-v2.0.0/{consent_id}:
+    get:
+      tags:
+        - Consents
+      summary: Получить согласие юридического лица по ID
+      parameters:
+        - in: path
+          name: consent_id
+          required: true
+          type: string
+          description: Идентификатор согласия
+      responses:
+        200:
+          description: Согласие найдено
+          schema:
+            $ref: '#/definitions/Consent'
+        404:
+          description: Согласие не найдено
+
+    put:
+      tags:
+        - Consents
+      summary: Обновить согласие юридического лица
+      parameters:
+        - in: path
+          name: consent_id
+          required: true
+          type: string
+          description: Идентификатор согласия
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [ACTIVE, REVOKED, EXPIRED]
+              tpp_id:
+                type: string
+              permissions:
+                type: array
+                items:
+                  type: string
+      responses:
+        200:
+          description: Согласие обновлено
+          schema:
+            $ref: '#/definitions/Consent'
+        400:
+          description: Ошибка валидации данных
+        404:
+          description: Согласие не найдено
+
+    delete:
+      tags:
+        - Consents
+      summary: Удалить согласие юридического лица
+      parameters:
+        - in: path
+          name: consent_id
+          required: true
+          type: string
+          description: Идентификатор согласия
+      responses:
+        204:
+          description: Согласие удалено
+        404:
+          description: Согласие не найдено
+
+definitions:
+  Consent:
+    type: object
+    properties:
+      id:
+        type: string
+        description: Уникальный идентификатор согласия
+      type:
+        type: string
+        enum: [physical_entity, legal_entity]
+        description: Тип согласия
+      status:
+        type: string
+        enum: [ACTIVE, REVOKED, EXPIRED]
+        description: Статус согласия
+      tpp_id:
+        type: string
+        description: Идентификатор TPP (Third Party Provider)
+      permissions:
+        type: array
+        items:
+          type: string
+        description: Список разрешений

@@ -1,0 +1,146 @@
+swagger: "2.0"
+info:
+  title: Product Agreements API
+  description: API для управления продуктовыми соглашениями
+  version: "1.0.1"
+tags:
+  - name: ProductAgreements
+    description: Операции с продуктовыми соглашениями
+
+paths:
+  /product-agreement-consents-v1.0.1/:
+    get:
+      tags: [ProductAgreements]
+      summary: Получить список всех продуктовых соглашений
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Список соглашений
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/ProductAgreement'
+
+    post:
+      tags: [ProductAgreements]
+      summary: Создать новое продуктовое соглашение
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/ProductAgreementInput'
+      responses:
+        201:
+          description: Соглашение успешно создано
+          schema:
+            $ref: '#/definitions/ProductAgreement'
+        400:
+          description: Ошибка валидации данных
+
+  /product-agreement-consents-v1.0.1/{agreement_id}:
+    get:
+      tags: [ProductAgreements]
+      summary: Получить продуктовое соглашение по ID
+      parameters:
+        - in: path
+          name: agreement_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        200:
+          description: Соглашение найдено
+          schema:
+            $ref: '#/definitions/ProductAgreement'
+        404:
+          description: Соглашение не найдено
+
+    put:
+      tags: [ProductAgreements]
+      summary: Обновить продуктовое соглашение
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: agreement_id
+          required: true
+          type: string
+          format: uuid
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/ProductAgreementUpdate'
+      responses:
+        200:
+          description: Соглашение обновлено
+          schema:
+            $ref: '#/definitions/ProductAgreement'
+        400:
+          description: Ошибка валидации данных
+        404:
+          description: Соглашение не найдено
+
+    delete:
+      tags: [ProductAgreements]
+      summary: Удалить продуктовое соглашение
+      parameters:
+        - in: path
+          name: agreement_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        204:
+          description: Соглашение удалено
+        404:
+          description: Соглашение не найдено
+
+definitions:
+  ProductAgreement:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      product_type:
+        type: string
+        enum: [LOAN, DEPOSIT, INSURANCE]
+      terms:
+        type: string
+        description: JSON-строка с условиями соглашения
+      status:
+        type: string
+        enum: [PENDING, ACTIVE, REJECTED]
+      created_at:
+        type: string
+        format: date-time
+    required: [id, product_type, terms, status]
+
+  ProductAgreementInput:
+    type: object
+    properties:
+      product_type:
+        type: string
+        enum: [LOAN, DEPOSIT, INSURANCE]
+      terms:
+        type: object
+        description: Условия соглашения (любая структура)
+    required: [product_type, terms]
+
+  ProductAgreementUpdate:
+    type: object
+    properties:
+      product_type:
+        type: string
+        enum: [LOAN, DEPOSIT, INSURANCE]
+      terms:
+        type: object
+        description: Условия соглашения (любая структура)
+    required: [product_type, terms]

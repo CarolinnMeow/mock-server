@@ -1,11 +1,14 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.vrp import vrp_schema
 from jsonschema import validate
+from flasgger import Swagger, swag_from
 from app.db import execute_query
 import uuid
 
 vrp_bp = Blueprint('vrp', __name__)
 DATABASE = 'mockserver.db'
+
+@swag_from('../docs/vrp.yml')
 
 @vrp_bp.route('/vrp-v1.3.1/', methods=['GET', 'POST'])
 def vrp_operations():

@@ -1,0 +1,129 @@
+swagger: "2.0"
+info:
+  title: Medical Insured API
+  description: API для управления застрахованными лицами в медицинской системе
+  version: "3.0.3"
+tags:
+  - name: MedicalInsured
+    description: Операции с застрахованными лицами
+
+paths:
+  /medical-insured-person-v3.0.3/:
+    get:
+      tags: [MedicalInsured]
+      summary: Получить список всех застрахованных лиц
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Успешный запрос
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/MedicalInsured'
+
+    post:
+      tags: [MedicalInsured]
+      summary: Создать новое застрахованное лицо
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/MedicalInsuredInput'
+      responses:
+        201:
+          description: Запись успешно создана
+          schema:
+            $ref: '#/definitions/MedicalInsured'
+        400:
+          description: Ошибка валидации данных
+
+  /medical-insured-person-v3.0.3/{person_id}:
+    get:
+      tags: [MedicalInsured]
+      summary: Получить данные застрахованного лица по ID
+      parameters:
+        - in: path
+          name: person_id
+          required: true
+          type: string
+          description: UUID застрахованного лица
+      responses:
+        200:
+          description: Успешный запрос
+          schema:
+            $ref: '#/definitions/MedicalInsured'
+        404:
+          description: Запись не найдена
+
+    put:
+      tags: [MedicalInsured]
+      summary: Обновить данные застрахованного лица
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: person_id
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/MedicalInsuredInput'
+      responses:
+        200:
+          description: Данные обновлены
+          schema:
+            $ref: '#/definitions/MedicalInsured'
+        400:
+          description: Ошибка валидации данных
+        404:
+          description: Запись не найдена
+
+    delete:
+      tags: [MedicalInsured]
+      summary: Удалить запись застрахованного лица
+      parameters:
+        - in: path
+          name: person_id
+          required: true
+          type: string
+      responses:
+        204:
+          description: Запись успешно удалена
+        404:
+          description: Запись не найдена
+
+definitions:
+  MedicalInsured:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+      policy_number:
+        type: string
+      birth_date:
+        type: string
+        format: date
+    required: [id, name, policy_number, birth_date]
+
+  MedicalInsuredInput:
+    type: object
+    properties:
+      name:
+        type: string
+      policy_number:
+        type: string
+      birth_date:
+        type: string
+        format: date
+    required: [name, policy_number, birth_date]

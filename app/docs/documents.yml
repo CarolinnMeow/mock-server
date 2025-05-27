@@ -1,0 +1,266 @@
+swagger: "2.0"
+info:
+  title: Documents API
+  description: API для управления банковскими и страховыми документами
+  version: "1.0"
+tags:
+  - name: BankDocs
+    description: Банковские документы
+  - name: InsuranceDocs
+    description: Страховые документы
+
+paths:
+  /bank-doc-v1.0.1/:
+    get:
+      tags: [BankDocs]
+      summary: Получить список банковских документов
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Список документов
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/BankDoc'
+    post:
+      tags: [BankDocs]
+      summary: Создать банковский документ
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/BankDocInput'
+      responses:
+        201:
+          description: Документ создан
+          schema:
+            $ref: '#/definitions/BankDoc'
+        400:
+          description: Ошибка валидации данных
+
+  /bank-doc-v1.0.1/{doc_id}:
+    get:
+      tags: [BankDocs]
+      summary: Получить банковский документ по ID
+      parameters:
+        - in: path
+          name: doc_id
+          required: true
+          type: string
+      responses:
+        200:
+          description: Документ найден
+          schema:
+            $ref: '#/definitions/BankDoc'
+        404:
+          description: Документ не найден
+    put:
+      tags: [BankDocs]
+      summary: Обновить банковский документ
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: doc_id
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/BankDocUpdate'
+      responses:
+        200:
+          description: Документ обновлен
+          schema:
+            $ref: '#/definitions/BankDoc'
+        400:
+          description: Ошибка валидации данных
+        404:
+          description: Документ не найден
+    delete:
+      tags: [BankDocs]
+      summary: Удалить банковский документ
+      parameters:
+        - in: path
+          name: doc_id
+          required: true
+          type: string
+      responses:
+        204:
+          description: Документ удален
+        404:
+          description: Документ не найден
+
+  /insurance-doc-v1.0.1/:
+    get:
+      tags: [InsuranceDocs]
+      summary: Получить список страховых документов
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Список документов
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/InsuranceDoc'
+    post:
+      tags: [InsuranceDocs]
+      summary: Создать страховой документ
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/InsuranceDocInput'
+      responses:
+        201:
+          description: Документ создан
+          schema:
+            $ref: '#/definitions/InsuranceDoc'
+        400:
+          description: Ошибка валидации данных
+
+  /insurance-doc-v1.0.1/{doc_id}:
+    get:
+      tags: [InsuranceDocs]
+      summary: Получить страховой документ по ID
+      parameters:
+        - in: path
+          name: doc_id
+          required: true
+          type: string
+      responses:
+        200:
+          description: Документ найден
+          schema:
+            $ref: '#/definitions/InsuranceDoc'
+        404:
+          description: Документ не найден
+    put:
+      tags: [InsuranceDocs]
+      summary: Обновить страховой документ
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: doc_id
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/InsuranceDocInput'
+      responses:
+        200:
+          description: Документ обновлен
+          schema:
+            $ref: '#/definitions/InsuranceDoc'
+        400:
+          description: Ошибка валидации данных
+        404:
+          description: Документ не найден
+    delete:
+      tags: [InsuranceDocs]
+      summary: Удалить страховой документ
+      parameters:
+        - in: path
+          name: doc_id
+          required: true
+          type: string
+      responses:
+        204:
+          description: Документ удален
+        404:
+          description: Документ не найден
+
+definitions:
+  BankDoc:
+    type: object
+    properties:
+      id:
+        type: string
+      type:
+        type: string
+        enum: [STATEMENT, CONTRACT, CERTIFICATE]
+      content:
+        type: string
+      signature:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+      account_id:
+        type: string
+
+  BankDocInput:
+    type: object
+    required: [type, content, signature, account_id]
+    properties:
+      type:
+        type: string
+        enum: [STATEMENT, CONTRACT, CERTIFICATE]
+      content:
+        type: string
+      signature:
+        type: string
+      account_id:
+        type: string
+
+  BankDocUpdate:
+    type: object
+    required: [type, content, signature]
+    properties:
+      type:
+        type: string
+        enum: [STATEMENT, CONTRACT, CERTIFICATE]
+      content:
+        type: string
+      signature:
+        type: string
+
+  InsuranceDoc:
+    type: object
+    properties:
+      id:
+        type: string
+      type:
+        type: string
+        enum: [POLICY, CLAIM, AGREEMENT]
+      content:
+        type: string
+      policy_number:
+        type: string
+      valid_until:
+        type: string
+        format: date
+      created_at:
+        type: string
+        format: date-time
+
+  InsuranceDocInput:
+    type: object
+    required: [type, content, policy_number, valid_until]
+    properties:
+      type:
+        type: string
+        enum: [POLICY, CLAIM, AGREEMENT]
+      content:
+        type: string
+      policy_number:
+        type: string
+      valid_until:
+        type: string
+        format: date

@@ -1,0 +1,140 @@
+swagger: "2.0"
+info:
+  title: Accounts API
+  description: API для управления банковскими счетами физических и юридических лиц
+  version: "1.0"
+tags:
+  - name: Accounts
+    description: Операции со счетами
+
+paths:
+  /accounts-v1.3.3/:
+    get:
+      tags: [Accounts]
+      summary: Получить список счетов физических лиц
+      description: Возвращает список всех счетов типа physical_entity.
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Список счетов
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PhysicalAccount'
+    post:
+      tags: [Accounts]
+      summary: Создать счет физического лица
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PhysicalAccountInput'
+      responses:
+        201:
+          description: Счет создан
+          schema:
+            $ref: '#/definitions/PhysicalAccount'
+        400:
+          description: Ошибка валидации данных
+
+  /accounts-v1.3.3/{account_id}:
+    get:
+      tags: [Accounts]
+      summary: Получить счет физического лица по ID
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          type: string
+      responses:
+        200:
+          description: Счет найден
+          schema:
+            $ref: '#/definitions/PhysicalAccount'
+        404:
+          description: Счет не найден
+    put:
+      tags: [Accounts]
+      summary: Обновить счет физического лица
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PhysicalAccountInput'
+      responses:
+        200:
+          description: Счет обновлен
+        400:
+          description: Ошибка валидации данных
+        404:
+          description: Счет не найден
+    delete:
+      tags: [Accounts]
+      summary: Удалить счет физического лица
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          type: string
+      responses:
+        204:
+          description: Счет удален
+        404:
+          description: Счет не найден
+
+  /accounts-le-v2.0.0/:
+    get:
+      tags: [Accounts]
+      summary: Получить список счетов юридических лиц
+      description: Возвращает список всех счетов типа legal_entity.
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Список счетов
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/LegalAccount'
+    post:
+      tags: [Accounts]
+      summary: Создать счет юридического лица
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/LegalAccountInput'
+      responses:
+        201:
+          description: Счет создан
+          schema:
+            $ref: '#/definitions/LegalAccount'
+        400:
+          description: Ошибка валидации данных
+
+  /accounts-le-v2.0.0/{account_id}:
+    get:
+      tags: [Accounts]
+      summary: Получить счет юридического лица по ID
+      parameters:
+        - in: path
+          name: account_id
+

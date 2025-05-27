@@ -1,0 +1,168 @@
+swagger: "2.0"
+info:
+  title: 211-ФЗ Payments API
+  description: API для управления платежами по 211-ФЗ
+  version: "1.3.1"
+tags:
+  - name: PM_211FZ
+    description: Платежи по 211-ФЗ
+
+paths:
+  /pm-211fz-v1.3.1/:
+    get:
+      tags: [PM_211FZ]
+      summary: Получить список всех платежей по 211-ФЗ
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Список платежей
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PM211FZPayment'
+
+    post:
+      tags: [PM_211FZ]
+      summary: Создать новый платёж по 211-ФЗ
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PM211FZPaymentInput'
+      responses:
+        201:
+          description: Платёж успешно создан
+          schema:
+            $ref: '#/definitions/PM211FZPayment'
+        400:
+          description: Ошибка валидации данных
+
+  /pm-211fz-v1.3.1/{payment_id}:
+    get:
+      tags: [PM_211FZ]
+      summary: Получить платёж по 211-ФЗ по ID
+      parameters:
+        - in: path
+          name: payment_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        200:
+          description: Данные платежа
+          schema:
+            $ref: '#/definitions/PM211FZPayment'
+        404:
+          description: Платёж не найден
+
+    put:
+      tags: [PM_211FZ]
+      summary: Обновить платёж по 211-ФЗ
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: payment_id
+          required: true
+          type: string
+          format: uuid
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PM211FZPaymentUpdate'
+      responses:
+        200:
+          description: Платёж обновлён
+          schema:
+            $ref: '#/definitions/PM211FZPayment'
+        400:
+          description: Ошибка валидации данных
+        404:
+          description: Платёж не найден
+
+    delete:
+      tags: [PM_211FZ]
+      summary: Удалить платёж по 211-ФЗ
+      parameters:
+        - in: path
+          name: payment_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        204:
+          description: Платёж удалён
+        404:
+          description: Платёж не найден
+
+definitions:
+  PM211FZPayment:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      status:
+        type: string
+        enum: [PENDING, COMPLETED, REJECTED]
+      type:
+        type: string
+        enum: [pm_211fz]
+      amount:
+        type: number
+      currency:
+        type: string
+        enum: [RUB, USD, EUR]
+      recipient:
+        type: string
+      purpose:
+        type: string
+      budget_code:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+      account_id:
+        type: string
+        format: uuid
+    required: [id, status, type, amount, currency, recipient, purpose, budget_code, created_at, account_id]
+
+  PM211FZPaymentInput:
+    type: object
+    properties:
+      amount:
+        type: number
+        minimum: 0.01
+      currency:
+        type: string
+        enum: [RUB, USD, EUR]
+      recipient:
+        type: string
+      purpose:
+        type: string
+      budget_code:
+        type: string
+      account_id:
+        type: string
+        format: uuid
+    required: [amount, currency, recipient, purpose, budget_code, account_id]
+
+  PM211FZPaymentUpdate:
+    type: object
+    properties:
+      amount:
+        type: number
+        minimum: 0.01
+      currency:
+        type: string
+        enum: [RUB, USD, EUR]
+      recipient:
+        type: string
+    required: [amount, currency, recipient]

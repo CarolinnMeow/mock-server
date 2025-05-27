@@ -1,9 +1,11 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.db import execute_query
+from flasgger import Swagger, swag_from
 
 transactions_bp = Blueprint('transactions', __name__)
 DATABASE = 'mockserver.db'
 
+@swag_from('../docs/transactions.yml')
 
 @transactions_bp.route('/transaction-history-v1.0.0/', methods=['GET'])
 def transactions():

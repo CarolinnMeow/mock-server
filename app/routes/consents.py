@@ -1,12 +1,15 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.consent import consent_schema
 from jsonschema import validate
+from flasgger import Swagger, swag_from
 from app.db import execute_query
 import uuid
 import json
 
 consents_bp = Blueprint('consents', __name__)
 DATABASE = 'mockserver.db'
+
+@swag_from('../docs/consents.yml')
 
 @consents_bp.route('/consent-pe-v2.0.0/', methods=['POST'])
 def create_pe_consent():

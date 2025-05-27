@@ -1,11 +1,14 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.pm_211fz import pm_211fz_schema
 from jsonschema import validate
+from flasgger import Swagger, swag_from
 from app.db import execute_query
 import uuid
 
 pm_211fz_bp = Blueprint('pm_211fz', __name__)
 DATABASE = 'mockserver.db'
+
+@swag_from('../docs/pm_211fz.yml')
 
 @pm_211fz_bp.route('/pm-211fz-v1.3.1/', methods=['GET', 'POST'])
 def pm_211fz():

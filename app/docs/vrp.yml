@@ -1,0 +1,147 @@
+swagger: "2.0"
+info:
+  title: VRP API
+  description: API для управления регулярными платежами (VRP)
+  version: "1.3.1"
+tags:
+  - name: VRP
+    description: Операции с регулярными платежами
+
+paths:
+  /vrp-v1.3.1/:
+    get:
+      tags: [VRP]
+      summary: Получить список всех VRP
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Список VRP
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/VRP'
+
+    post:
+      tags: [VRP]
+      summary: Создать новый VRP
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/VRPInput'
+      responses:
+        201:
+          description: VRP успешно создан
+          schema:
+            $ref: '#/definitions/VRP'
+        400:
+          description: Ошибка валидации данных
+
+  /vrp-v1.3.1/{vrp_id}:
+    get:
+      tags: [VRP]
+      summary: Получить VRP по ID
+      parameters:
+        - in: path
+          name: vrp_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        200:
+          description: Данные VRP
+          schema:
+            $ref: '#/definitions/VRP'
+        404:
+          description: VRP не найден
+
+    put:
+      tags: [VRP]
+      summary: Обновить параметры VRP
+      consumes:
+        - application/json
+      parameters:
+        - in: path
+          name: vrp_id
+          required: true
+          type: string
+          format: uuid
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/VRPInput'
+      responses:
+        200:
+          description: VRP обновлён
+          schema:
+            $ref: '#/definitions/VRP'
+        400:
+          description: Ошибка валидации
+        404:
+          description: VRP не найден
+
+    delete:
+      tags: [VRP]
+      summary: Удалить VRP
+      parameters:
+        - in: path
+          name: vrp_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        204:
+          description: VRP удалён
+        404:
+          description: VRP не найден
+
+definitions:
+  VRP:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      status:
+        type: string
+        enum: [ACTIVE, PAUSED, CANCELLED]
+      max_amount:
+        type: number
+        minimum: 0.01
+      frequency:
+        type: string
+        enum: [DAILY, WEEKLY, MONTHLY]
+      valid_until:
+        type: string
+        format: date
+      recipient_account:
+        type: string
+        format: uuid
+      created_at:
+        type: string
+        format: date-time
+    required: [id, status, max_amount, frequency, valid_until, recipient_account]
+
+  VRPInput:
+    type: object
+    properties:
+      max_amount:
+        type: number
+        minimum: 0.01
+      frequency:
+        type: string
+        enum: [DAILY, WEEKLY, MONTHLY]
+      valid_until:
+        type: string
+        format: date
+      recipient_account:
+        type: string
+        format: uuid
+    required: [max_amount, frequency, valid_until, recipient_account]

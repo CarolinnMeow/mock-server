@@ -1,12 +1,15 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.product_agreement import product_agreement_schema
 from jsonschema import validate
+from flasgger import Swagger, swag_from
 from app.db import execute_query
 import uuid
 import json
 
 product_agreements_bp = Blueprint('product_agreements', __name__)
 DATABASE = 'mockserver.db'
+
+@swag_from('../docs/product_agreements.yml')
 
 @product_agreements_bp.route('/product-agreement-consents-v1.0.1/', methods=['GET', 'POST'])
 def product_agreements():

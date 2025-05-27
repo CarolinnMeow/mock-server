@@ -1,11 +1,14 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.medical import medical_schema
 from jsonschema import validate
+from flasgger import Swagger, swag_from
 from app.db import execute_query
 import uuid
 
 medical_bp = Blueprint('medical', __name__)
 DATABASE = 'mockserver.db'
+
+@swag_from('../docs/medical_insured.yml')
 
 @medical_bp.route('/medical-insured-person-v3.0.3/', methods=['GET', 'POST'])
 def medical_insured():

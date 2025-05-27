@@ -1,0 +1,81 @@
+swagger: "2.0"
+info:
+  title: Transactions API
+  description: API для получения истории транзакций
+  version: "1.0.0"
+tags:
+  - name: Transactions
+    description: Операции с транзакциями
+
+paths:
+  /transaction-history-v1.0.0/:
+    get:
+      tags: [Transactions]
+      summary: Получить историю транзакций (с пагинацией)
+      produces:
+        - application/json
+      parameters:
+        - name: page
+          in: query
+          description: Номер страницы (по умолчанию 1)
+          required: false
+          type: integer
+          minimum: 1
+      responses:
+        200:
+          description: Список транзакций
+          schema:
+            type: object
+            properties:
+              transactions:
+                type: array
+                items:
+                  $ref: '#/definitions/Transaction'
+              page:
+                type: integer
+                description: Номер страницы
+              page_size:
+                type: integer
+                description: Размер страницы (по умолчанию 50)
+        400:
+          description: Ошибка валидации параметров пагинации
+
+  /transaction-history-v1.0.0/{tx_id}:
+    get:
+      tags: [Transactions]
+      summary: Получить транзакцию по ID
+      parameters:
+        - in: path
+          name: tx_id
+          required: true
+          type: string
+          description: Идентификатор транзакции
+      responses:
+        200:
+          description: Транзакция найдена
+          schema:
+            $ref: '#/definitions/Transaction'
+        404:
+          description: Транзакция не найдена
+
+definitions:
+  Transaction:
+    type: object
+    properties:
+      id:
+        type: string
+      date:
+        type: string
+        format: date-time
+      amount:
+        type: number
+      currency:
+        type: string
+        enum: [RUB, USD, EUR]
+      description:
+        type: string
+      account_id:
+        type: string
+      status:
+        type: string
+    required: [id, date, amount, currency, account_id, status]

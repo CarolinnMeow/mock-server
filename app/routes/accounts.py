@@ -9,7 +9,7 @@ import uuid
 accounts_bp = Blueprint('accounts', __name__)
 DATABASE = 'mockserver.db'
 
-@swag_from('../docs/accounts_post.yml')
+@swag_from('../docs/accounts.yml')
 
 @accounts_bp.route('/accounts-v1.3.3/', methods=['GET', 'POST'])
 def physical_accounts():

@@ -2,11 +2,14 @@ from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.payment import payment_schema
 from jsonschema import validate
 from app.db import execute_query
+from flasgger import Swagger, swag_from
 import uuid
 from datetime import datetime
 
 payments_bp = Blueprint('payments', __name__)
 DATABASE = 'mockserver.db'
+
+@swag_from('../docs/payments.yml')
 
 @payments_bp.route('/payments-v1.3.1/', methods=['POST'])
 def create_payment():

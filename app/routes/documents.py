@@ -1,11 +1,14 @@
 from flask import Blueprint, jsonify, request, abort, g
 from app.schemas.document import bank_doc_schema, insurance_doc_schema
 from jsonschema import validate
+from flasgger import Swagger, swag_from
 from app.db import execute_query
 import uuid
 
 documents_bp = Blueprint('documents', __name__)
 DATABASE = 'mockserver.db'
+
+@swag_from('../docs/documents.yml')
 
 @documents_bp.route('/bank-doc-v1.0.1/', methods=['GET', 'POST'])
 def bank_docs():
