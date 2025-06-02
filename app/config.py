@@ -10,9 +10,8 @@ class TestConfig(Config):
     DATABASE = os.path.join(BASE_DIR, 'data', 'test_mockserver.db')
     TESTING = True
 
-# HTTP методы
+# HTTP методы и коды статусов
 HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
-
 HTTP_STATUS_CODES = {
     "OK": 200,
     "CREATED": 201,
@@ -23,6 +22,7 @@ HTTP_STATUS_CODES = {
     "NO_CONTENT": 204
 }
 
+# Системные настройки
 SYSTEM_CONFIG = {
     "api_version": "1.0.0",
     "allowed_error_codes": [400, 401, 403, 404, 500, 502, 503],
@@ -49,9 +49,65 @@ SYSTEM_CONFIG = {
     }
 }
 
+# Типы аккаунтов
 ACCOUNT_TYPES = {
     "physical": "physical_entity",
     "legal": "legal_entity"
+}
+
+# Типы согласий
+CONSENT_TYPES = {
+    "physical": "physical_entity",
+    "legal": "legal_entity"
+}
+
+# Типы документов
+DOCUMENT_TYPES = {
+    "bank": "bank_doc",
+    "insurance": "insurance_doc"
+}
+
+# Ограничения на документы
+DOCUMENT_LIMITS = {
+    "max_content_length": 10000,
+    "allowed_types": ["pdf", "docx", "txt"]
+}
+
+# Ограничения на медицинские данные
+MEDICAL_LIMITS = {
+    "max_name_length": 100,
+    "max_policy_length": 20
+}
+
+# Статусы платежей и типы
+PAYMENT_STATUSES = {
+    "pending": "PENDING",
+    "completed": "COMPLETED",
+    "failed": "FAILED"
+}
+PAYMENT_TYPES = {
+    "pm_211fz": "pm_211fz",
+    "standard": "standard"
+}
+
+# Статусы соглашений
+AGREEMENT_STATUSES = {
+    "active": "ACTIVE",
+    "inactive": "INACTIVE",
+    "pending": "PENDING"
+}
+
+# Пагинация
+PAGINATION_CONFIG = {
+    "default_page_size": 50,
+    "max_page_size": 100
+}
+
+# Статусы VRP
+VRP_STATUSES = {
+    "active": "ACTIVE",
+    "paused": "PAUSED",
+    "expired": "EXPIRED"
 }
 
 # Сообщения для ответов
@@ -63,52 +119,104 @@ RESPONSE_MESSAGES = {
     "method_not_allowed": "Method not allowed"
 }
 
-CONSENT_TYPES = {
-    "physical": "physical_entity",
-    "legal": "legal_entity"
+# ====== ТЕСТОВЫЕ ДАННЫЕ ======
+
+TEST_ACCOUNTS = {
+    "physical": [
+        {"balance": 1000, "currency": "RUB", "owner": "Иван Иванов", "status": "active"},
+        {"balance": 200, "currency": "USD", "owner": "John Doe", "status": "blocked"},
+    ],
+    "legal": [
+        {"balance": 5000, "currency": "RUB", "company": "ООО Ромашка", "status": "active"},
+        {"balance": 300, "currency": "USD", "company": "Acme Corp", "status": "inactive"},
+    ]
 }
 
-DOCUMENT_TYPES = {
-    "bank": "bank_doc",
-    "insurance": "insurance_doc"
-}
+TEST_CONSENTS = [
+    {
+        "tpp_id": "tpp1",
+        "permissions": ["read", "write"],
+        "subject": "user1",
+        "scope": "all"
+    },
+    {
+        "tpp_id": "tpp2",
+        "permissions": ["read"],
+        "subject": "user2",
+        "scope": "all"
+    }
+]
 
-# Ограничения (опционально)
-DOCUMENT_LIMITS = {
-    "max_content_length": 10000,  # символов
-    "allowed_types": ["pdf", "docx", "txt"]
-}
+TEST_PAYMENTS = [
+    {
+        "amount": 100,
+        "currency": "RUB",
+        "recipient": "Иван",
+        "account_id": "test-acc-1"
+    },
+    {
+        "amount": 250,
+        "currency": "USD",
+        "recipient": "John",
+        "account_id": "test-acc-2"
+    }
+]
 
-MEDICAL_LIMITS = {
-    "max_name_length": 100,  # пример ограничения
-    "max_policy_length": 20
-}
+TEST_BANK_DOCS = [
+    {
+        "type": "STATEMENT",
+        "content": "dGVzdA==",
+        "signature": "sig123",
+        "account_id": "test-acc-1"
+    }
+]
 
-PAYMENT_STATUSES = {
-    "pending": "PENDING",
-    "completed": "COMPLETED",
-    "failed": "FAILED"
-}
+TEST_INSURANCE_DOCS = [
+    {
+        "type": "POLICY",
+        "content": "dGVzdA==",
+        "policy_number": "P12345",
+        "valid_until": "2025-12-31"
+    }
+]
 
-PAYMENT_TYPES = {
-    "pm_211fz": "pm_211fz",
-    "standard": "standard"
-}
+TEST_PRODUCT_AGREEMENTS = [
+    {
+        "product_type": "LOAN",
+        "terms": {"rate": 0.15, "duration": 12}
+    }
+]
 
-AGREEMENT_STATUSES = {
-    "active": "ACTIVE",
-    "inactive": "INACTIVE",
-    "pending": "PENDING"
-}
+TEST_VRPS = [
+    {
+        "max_amount": 5000,
+        "frequency": "MONTHLY",
+        "valid_until": "2026-01-01",
+        "recipient_account": "RU0012345678"
+    }
+]
 
-PAGINATION_CONFIG = {
-    "default_page_size": 50,
-    "max_page_size": 100
-}
+TEST_TRANSACTIONS = [
+    {
+        "id": "tx1",
+        "amount": 100,
+        "currency": "RUB",
+        "date": "2025-01-01T10:00:00",
+        "account_id": "test-acc-1"
+    },
+    {
+        "id": "tx2",
+        "amount": 250,
+        "currency": "USD",
+        "date": "2025-01-02T12:00:00",
+        "account_id": "test-acc-2"
+    }
+]
 
-VRP_STATUSES = {
-    "active": "ACTIVE",
-    "paused": "PAUSED",
-    "expired": "EXPIRED"
-}
-
+TEST_MEDICAL_INSURED = [
+    {
+        "name": "Иван Иванов",
+        "policy_number": "POL123456",
+        "birth_date": "1990-01-01"
+    }
+]
