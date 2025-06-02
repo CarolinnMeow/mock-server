@@ -3,6 +3,7 @@ from jsonschema import validate, ValidationError
 from flasgger import swag_from
 import uuid
 import logging
+from app.schemas.medical import medical_schema
 from app.config import (
     RESPONSE_MESSAGES,
     MEDICAL_LIMITS,

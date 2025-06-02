@@ -1,45 +1,70 @@
 import os
-import sqlite3
 import unittest
 from app import create_app
-from app.services.data_service import DataService
 from app.config import TestConfig
+from app.db import init_db, get_db
+
 
 class TestMedical(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """
-        Перед запуском всех тестов пересоздаёт тестовую базу и наполняет её схемой и тестовыми данными.
-        """
-        cls.db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'data', 'test_mockserver.db')
-        if os.path.exists(cls.db_path):
-            os.remove(cls.db_path)
-        schema_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'schema.sql')
-        with open(schema_path, 'r', encoding='utf-8') as f:
-            schema = f.read()
-        conn = sqlite3.connect(cls.db_path)
-        conn.executescript(schema)
-        conn.close()
-        ds = DataService()
-        ds.save_to_db(cls.db_path)
+        """Инициализация тестового окружения"""
+        # Удаляем старую тестовую базу
+        db_path = TestConfig.DATABASE
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+        # Создаём приложение и инициализируем базу
+        cls.app = create_app(config_class=TestConfig)
+        with cls.app.app_context():
+            init_db(fill_test_data=True)
+        cls.client = cls.app.test_client()
 
     def setUp(self):
-        self.app = create_app(config_class=TestConfig)
-        self.app.config['TESTING'] = True
+        """Выполняется перед каждым тестом"""
         self.client = self.app.test_client()
 
     def test_create_medical_insured(self):
-        data = {
+        test_data = {
             "name": "Иван Иванов",
             "policy_number": "POL123456",
             "birth_date": "1990-01-01"
         }
-        response = self.client.post('/medical-insured-person-v3.0.3/', json=data)
+
+        # Тестирование создания записи
+        response = self.client.post('/medical-insured-person-v3.0.3/', json=test_data)
         self.assertEqual(response.status_code, 201)
+
+        # Проверка содержимого ответа
         resp_json = response.get_json()
-        self.assertEqual(resp_json["name"], "Иван Иванов")
-        self.assertEqual(resp_json["policy_number"], "POL123456")
+        self.assertEqual(resp_json["name"], test_data["name"])
+        self.assertEqual(resp_json["policy_number"], test_data["policy_number"])
+        self.assertEqual(resp_json["birth_date"], test_data["birth_date"])
+        self.assertIn("id", resp_json)
+
+        # Проверка существования в базе данных
+        with self.app.app_context():
+            db = get_db()
+            person = db.execute(
+                'SELECT * FROM medical_insured WHERE id = ?',
+                (resp_json["id"],)
+            ).fetchone()
+            self.assertIsNotNone(person)
+            self.assertEqual(person["name"], test_data["name"])
+
+    def test_create_invalid_medical_insured(self):
+        # Тест с неполными данными
+        invalid_data = {
+            "name": "Иван Иванов",
+            "birth_date": "1990-01-01"
+        }
+
+        response = self.client.post('/medical-insured-person-v3.0.3/', json=invalid_data)
+        self.assertEqual(response.status_code, 400)
+        error = response.get_json()
+        self.assertIn("validation_error", error["error"])
+
 
 if __name__ == '__main__':
     unittest.main()

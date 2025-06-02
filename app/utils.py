@@ -1,5 +1,8 @@
 import functools
 from datetime import datetime
+import logging
+from flask import request
+
 
 def log_endpoint(func):
     @functools.wraps(func)

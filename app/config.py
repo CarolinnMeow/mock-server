@@ -128,22 +128,24 @@ TEST_ACCOUNTS = {
     ],
     "legal": [
         {"balance": 5000, "currency": "RUB", "company": "ООО Ромашка", "status": "active"},
-        {"balance": 300, "currency": "USD", "company": "Acme Corp", "status": "inactive"},
+        {"balance": 300, "currency": "USD", "company": "Acme Corp", "status": "closed"},
     ]
 }
 
 TEST_CONSENTS = [
     {
+        "type": "physical_entity",
+        "status": "ACTIVE",
         "tpp_id": "tpp1",
         "permissions": ["read", "write"],
-        "subject": "user1",
-        "scope": "all"
+        "account_id": "test-acc-1"
     },
     {
+        "type": "legal_entity",
+        "status": "ACTIVE",
         "tpp_id": "tpp2",
         "permissions": ["read"],
-        "subject": "user2",
-        "scope": "all"
+        "account_id": "test-acc-2"
     }
 ]
 
@@ -183,7 +185,8 @@ TEST_INSURANCE_DOCS = [
 TEST_PRODUCT_AGREEMENTS = [
     {
         "product_type": "LOAN",
-        "terms": {"rate": 0.15, "duration": 12}
+        "terms": {"rate": 0.15, "duration": 12},
+        "account_id": "test-acc-1"
     }
 ]
 
@@ -202,14 +205,16 @@ TEST_TRANSACTIONS = [
         "amount": 100,
         "currency": "RUB",
         "date": "2025-01-01T10:00:00",
-        "account_id": "test-acc-1"
+        "account_id": "test-acc-1",
+        "status": "SUCCESS"
     },
     {
         "id": "tx2",
         "amount": 250,
         "currency": "USD",
         "date": "2025-01-02T12:00:00",
-        "account_id": "test-acc-2"
+        "account_id": "test-acc-2",
+        "status": "SUCCESS"
     }
 ]
 

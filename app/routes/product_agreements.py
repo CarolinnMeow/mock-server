@@ -1,9 +1,10 @@
 from flask import Blueprint, jsonify, request
-from jsonschema import ValidationError
+from jsonschema import validate, ValidationError
 from flasgger import swag_from
 import uuid
 import json
 import logging
+from app.schemas.product_agreement import product_agreement_schema
 from app.config import (
     RESPONSE_MESSAGES,
     AGREEMENT_STATUSES,

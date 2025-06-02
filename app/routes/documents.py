@@ -3,6 +3,7 @@ from jsonschema import validate, ValidationError
 from flasgger import swag_from
 import uuid
 import logging
+from app.schemas.document import bank_doc_schema, insurance_doc_schema
 from app.config import (
     RESPONSE_MESSAGES,
     HTTP_STATUS_CODES,

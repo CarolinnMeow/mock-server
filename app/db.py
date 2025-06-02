@@ -117,16 +117,15 @@ def fill_test_db():
     # Consents
     for c in TEST_CONSENTS:
         execute_query(
-            '''INSERT INTO consents (id, type, status, tpp_id, permissions, subject, scope)
-               VALUES (?, ?, ?, ?, ?, ?, ?)''',
+            '''INSERT INTO consents (id, type, status, tpp_id, permissions, account_id)
+               VALUES (?, ?, ?, ?, ?, ?)''',
             (
                 str(uuid.uuid4()),
-                CONSENT_TYPES["physical"],
-                "ACTIVE",
+                c["type"],
+                c["status"],
                 c["tpp_id"],
                 json.dumps(c["permissions"]),
-                c["subject"],
-                c["scope"]
+                c["account_id"]
             ),
             commit=True
         )
@@ -181,13 +180,14 @@ def fill_test_db():
     # Product agreements
     for a in TEST_PRODUCT_AGREEMENTS:
         execute_query(
-            '''INSERT INTO product_agreements (id, product_type, terms, status)
-               VALUES (?, ?, ?, ?)''',
+            '''INSERT INTO product_agreements (id, product_type, terms, status, account_id)
+               VALUES (?, ?, ?, ?, ?)''',
             (
                 str(uuid.uuid4()),
                 a["product_type"],
                 json.dumps(a["terms"]),
-                AGREEMENT_STATUSES["active"]
+                AGREEMENT_STATUSES["active"],
+                a["account_id"]
             ),
             commit=True
         )
@@ -211,14 +211,15 @@ def fill_test_db():
     # Transactions
     for t in TEST_TRANSACTIONS:
         execute_query(
-            '''INSERT INTO transactions (id, amount, currency, date, account_id)
-               VALUES (?, ?, ?, ?, ?)''',
+            '''INSERT INTO transactions (id, amount, currency, date, account_id, status)
+               VALUES (?, ?, ?, ?, ?, ?)''',
             (
                 t["id"],
                 t["amount"],
                 t["currency"],
                 t["date"],
-                t["account_id"]
+                t["account_id"],
+                t["status"]
             ),
             commit=True
         )

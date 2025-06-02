@@ -4,6 +4,7 @@ from flasgger import swag_from
 import uuid
 from datetime import datetime
 import logging
+from app.schemas.payment import payment_schema
 from app.config import (
     RESPONSE_MESSAGES,
     PAYMENT_STATUSES,

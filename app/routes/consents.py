@@ -4,6 +4,7 @@ from flasgger import swag_from
 import uuid
 import json
 import logging
+from app.schemas.consent import consent_schema
 from app.config import (
     CONSENT_TYPES,
     RESPONSE_MESSAGES,

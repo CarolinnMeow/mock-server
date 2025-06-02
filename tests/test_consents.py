@@ -1,40 +1,30 @@
 import os
-import sqlite3
 import unittest
 from app import create_app
-from app.services.data_service import DataService
 from app.config import TestConfig
+from app.db import init_db
 
 class TestConsents(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """
-        Перед запуском всех тестов пересоздаёт тестовую базу и наполняет её схемой и тестовыми данными.
-        """
-        cls.db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'data', 'test_mockserver.db')
-        if os.path.exists(cls.db_path):
-            os.remove(cls.db_path)
-        schema_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'schema.sql')
-        with open(schema_path, 'r', encoding='utf-8') as f:
-            schema = f.read()
-        conn = sqlite3.connect(cls.db_path)
-        conn.executescript(schema)
-        conn.close()
-        ds = DataService()
-        ds.save_to_db(cls.db_path)
+        # Удаляем старую тестовую базу
+        db_path = TestConfig.DATABASE
+        if os.path.exists(db_path):
+            os.remove(db_path)
+        # Создаём приложение и инициализируем базу с тестовыми данными
+        cls.app = create_app(config_class=TestConfig)
+        with cls.app.app_context():
+            init_db(fill_test_data=True)
+        cls.client = cls.app.test_client()
 
     def setUp(self):
-        self.app = create_app(config_class=TestConfig)
-        self.app.config['TESTING'] = True
         self.client = self.app.test_client()
 
     def test_create_physical_consent(self):
         data = {
             "tpp_id": "tpp1",
-            "permissions": ["read", "write"],
-            "subject": "user1",
-            "scope": "all"
+            "permissions": ["read", "write"]
         }
         response = self.client.post('/consent-pe-v2.0.0/', json=data)
         self.assertEqual(response.status_code, 201)
@@ -47,9 +37,7 @@ class TestConsents(unittest.TestCase):
     def test_create_legal_consent(self):
         data = {
             "tpp_id": "tpp2",
-            "permissions": ["read"],
-            "subject": "user1",
-            "scope": "all"
+            "permissions": ["read"]
         }
         response = self.client.post('/consent-le-v2.0.0/', json=data)
         self.assertEqual(response.status_code, 201)
