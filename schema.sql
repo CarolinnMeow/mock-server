@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS consents (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     account_id TEXT NOT NULL,
+    scope TEXT,
+    subject TEXT,
     FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 

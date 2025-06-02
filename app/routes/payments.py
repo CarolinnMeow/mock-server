@@ -12,7 +12,7 @@ from app.config import (
     HTTP_METHODS
 )
 from app.db import safe_db_query
-from app.utils import log_endpoint, serialize_row
+from app.utils import log_endpoint, serialize_row, require_headers_and_echo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ def safe_validate(data, schema):
 @payments_bp.route('/payments-v1.3.1/', methods=[HTTP_METHODS[1]])  # POST
 @swag_from('../docs/payments.yml')
 @log_endpoint
+@require_headers_and_echo
 def create_payment():
     error = safe_validate(request.json, payment_schema)
     if error:
@@ -68,6 +69,7 @@ def create_payment():
 @payments_bp.route('/payments-v1.3.1/<payment_id>', methods=HTTP_METHODS)
 @swag_from('../docs/payments.yml')
 @log_endpoint
+@require_headers_and_echo
 def payment_operations(payment_id):
     try:
         cur = safe_db_query('SELECT * FROM payments WHERE id = ?', (payment_id,))

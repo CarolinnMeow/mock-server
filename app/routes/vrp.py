@@ -13,7 +13,7 @@ from app.config import (
     HTTP_METHODS
 )
 from app.db import safe_db_query
-from app.utils import log_endpoint, serialize_row
+from app.utils import log_endpoint, serialize_row, require_headers_and_echo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ def safe_validate(data, schema):
 @vrp_bp.route('/vrp-v1.3.1/', methods=HTTP_METHODS[:2])
 @swag_from('../docs/vrp.yml')
 @log_endpoint
+@require_headers_and_echo
 def vrp_operations():
     if request.method == 'POST':
         return handle_vrp_creation(request.json)
@@ -109,6 +110,7 @@ def handle_vrp_list(args):
 @vrp_bp.route('/vrp-v1.3.1/<vrp_id>', methods=HTTP_METHODS)
 @swag_from('../docs/vrp.yml')
 @log_endpoint
+@require_headers_and_echo
 def single_vrp(vrp_id):
     try:
         vrp = get_vrp(vrp_id)

@@ -76,7 +76,7 @@ class TestPayments(unittest.TestCase):
         response = self.client.post('/payments-v1.3.1/', json=invalid_data)
         self.assertEqual(response.status_code, 400)
         error = response.get_json()
-        self.assertIn("validation_error", error["error"])
+        self.assertIn("Validation error", error["error"])
 
     def test_create_payment_invalid_account(self):
         """Тест создания платежа с несуществующим счетом"""

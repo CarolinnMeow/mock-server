@@ -8,7 +8,7 @@ from app.config import (
     HTTP_METHODS
 )
 from app.db import safe_db_query
-from app.utils import log_endpoint, serialize_row
+from app.utils import log_endpoint, serialize_row, require_headers_and_echo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ def validate_pagination(page: int, page_size: int) -> tuple:
 @transactions_bp.route('/transaction-history-v1.0.0/', methods=HTTP_METHODS[:1])
 @swag_from('../docs/transactions.yml')
 @log_endpoint
+@require_headers_and_echo
 def transactions():
     try:
         page = int(request.args.get('page', 1))
@@ -61,6 +62,7 @@ def transactions():
 @transactions_bp.route('/transaction-history-v1.0.0/<tx_id>', methods=HTTP_METHODS[:1])
 @swag_from('../docs/transactions.yml')
 @log_endpoint
+@require_headers_and_echo
 def single_transaction(tx_id):
     try:
         cur = safe_db_query(

@@ -11,7 +11,7 @@ from app.config import (
     HTTP_METHODS
 )
 from app.db import safe_db_query
-from app.utils import log_endpoint, serialize_row
+from app.utils import log_endpoint, serialize_row, require_headers_and_echo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ def safe_validate(data, schema):
 @medical_bp.route('/medical-insured-person-v3.0.3/', methods=HTTP_METHODS[:2])
 @swag_from('../docs/medical_insured.yml')
 @log_endpoint
+@require_headers_and_echo
 def medical_insured():
     if request.method == 'POST':
         error = safe_validate(request.json, medical_schema)
@@ -79,6 +80,7 @@ def medical_insured():
 @medical_bp.route('/medical-insured-person-v3.0.3/<person_id>', methods=HTTP_METHODS)
 @swag_from('../docs/medical_insured.yml')
 @log_endpoint
+@require_headers_and_echo
 def single_medical_insured(person_id):
     try:
         cur = safe_db_query('SELECT * FROM medical_insured WHERE id = ?', (person_id,))

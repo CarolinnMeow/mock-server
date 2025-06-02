@@ -1,9 +1,10 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, abort
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from flasgger import swag_from
 import uuid
 import logging
+import re
 from app.db import execute_query
 from app.schemas.account import physical_account_schema, legal_account_schema
 from app.config import (
@@ -12,7 +13,7 @@ from app.config import (
     RESPONSE_MESSAGES,
     HTTP_STATUS_CODES
 )
-from app.utils import log_endpoint
+from app.utils import log_endpoint, require_headers_and_echo
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
@@ -20,6 +21,15 @@ logger = logging.getLogger(__name__)
 
 accounts_bp = Blueprint('accounts', __name__)
 
+# Регулярное выражение для проверки UUID
+UUID_PATTERN = re.compile(r'^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$', re.I)
+
+def validate_uuid(account_id: str) -> None:
+    """Валидация формата UUID"""
+    if not UUID_PATTERN.match(account_id):
+        logger.warning(f"Invalid UUID format: {account_id}")
+        abort(HTTP_STATUS_CODES["BAD_REQUEST"],
+              description=RESPONSE_MESSAGES.get("invalid_uuid", "Invalid account_id format"))
 
 def safe_validate(data, schema):
     try:
@@ -29,7 +39,6 @@ def safe_validate(data, schema):
         logger.warning(f"Validation error: {e}")
         return str(e)
 
-
 def safe_db_query(query, params=(), commit=False):
     try:
         return execute_query(query, params, commit)
@@ -38,10 +47,12 @@ def safe_db_query(query, params=(), commit=False):
         abort(HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"],
               description=RESPONSE_MESSAGES["db_error"])
 
+# === Эндпоинты для счетов физических лиц ===
 
 @accounts_bp.route('/accounts-v1.3.3/', methods=HTTP_METHODS[:2])  # GET, POST
 @swag_from('../docs/accounts.yml')
 @log_endpoint
+@require_headers_and_echo
 def physical_accounts():
     if request.method == 'GET':
         cur = safe_db_query(
@@ -77,11 +88,13 @@ def physical_accounts():
 
     return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), HTTP_STATUS_CODES["METHOD_NOT_ALLOWED"]
 
-
 @accounts_bp.route('/accounts-v1.3.3/<account_id>', methods=HTTP_METHODS)
 @swag_from('../docs/accounts.yml')
 @log_endpoint
+@require_headers_and_echo
 def physical_account(account_id):
+    validate_uuid(account_id)  # Проверка UUID
+
     if request.method == 'GET':
         cur = safe_db_query(
             'SELECT * FROM accounts WHERE id = ? AND type = ?',
@@ -125,10 +138,12 @@ def physical_account(account_id):
 
     return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), HTTP_STATUS_CODES["METHOD_NOT_ALLOWED"]
 
+# === Эндпоинты для счетов юридических лиц ===
 
 @accounts_bp.route('/accounts-le-v2.0.0/', methods=HTTP_METHODS[:2])  # GET, POST
 @swag_from('../docs/accounts.yml')
 @log_endpoint
+@require_headers_and_echo
 def legal_accounts():
     if request.method == 'GET':
         cur = safe_db_query(
@@ -164,11 +179,13 @@ def legal_accounts():
 
     return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), HTTP_STATUS_CODES["METHOD_NOT_ALLOWED"]
 
-
 @accounts_bp.route('/accounts-le-v2.0.0/<account_id>', methods=HTTP_METHODS)
 @swag_from('../docs/accounts.yml')
 @log_endpoint
+@require_headers_and_echo
 def legal_account(account_id):
+    validate_uuid(account_id)
+
     if request.method == 'GET':
         cur = safe_db_query(
             'SELECT * FROM accounts WHERE id = ? AND type = ?',

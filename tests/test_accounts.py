@@ -75,7 +75,8 @@ class TestAccounts(unittest.TestCase):
             response = self.client.post('/accounts-v1.3.3/', json=invalid_data)
             self.assertEqual(response.status_code, 400)
             error_data = response.get_json()
-            self.assertIn("validation_error", error_data["error"])
+            self.assertIn("Validation error", error_data["error"])
+
 
 
 if __name__ == '__main__':

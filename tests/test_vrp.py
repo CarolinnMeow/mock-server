@@ -68,7 +68,7 @@ class TestVRP(unittest.TestCase):
         response = self.client.post('/vrp-v1.3.1/', json=invalid_data)
         self.assertEqual(response.status_code, 400)
         error = response.get_json()
-        self.assertIn("validation_error", error["error"])
+        self.assertIn("Validation error", error["error"])
 
     def test_get_vrp_list(self):
         """Тест получения списка VRP"""

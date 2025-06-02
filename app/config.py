@@ -137,6 +137,8 @@ TEST_CONSENTS = [
         "type": "physical_entity",
         "status": "ACTIVE",
         "tpp_id": "tpp1",
+        "subject": "smth",
+        "scope": "smth1",
         "permissions": ["read", "write"],
         "account_id": "test-acc-1"
     },
@@ -144,6 +146,8 @@ TEST_CONSENTS = [
         "type": "legal_entity",
         "status": "ACTIVE",
         "tpp_id": "tpp2",
+        "subject": "smth3",
+        "scope": "smth2",
         "permissions": ["read"],
         "account_id": "test-acc-2"
     }
@@ -178,6 +182,7 @@ TEST_INSURANCE_DOCS = [
         "type": "POLICY",
         "content": "dGVzdA==",
         "policy_number": "P12345",
+        "signature": "sig123",
         "valid_until": "2025-12-31"
     }
 ]

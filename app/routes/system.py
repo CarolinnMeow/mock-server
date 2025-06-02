@@ -11,7 +11,7 @@ from app.config import (
     HTTP_METHODS
 )
 from app.db import safe_db_query
-from app.utils import log_endpoint
+from app.utils import log_endpoint, require_headers_and_echo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

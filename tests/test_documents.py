@@ -78,7 +78,7 @@ class TestDocuments(unittest.TestCase):
         response = self.client.post('/bank-doc-v1.0.1/', json=invalid_data)
         self.assertEqual(response.status_code, 400)
         error = response.get_json()
-        self.assertIn("validation_error", error["error"])
+        self.assertIn("Validation error", error["error"])
 
 
 if __name__ == '__main__':

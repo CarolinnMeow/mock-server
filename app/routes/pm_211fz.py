@@ -12,7 +12,7 @@ from app.config import (
     HTTP_METHODS
 )
 from app.db import safe_db_query
-from app.utils import log_endpoint, serialize_row
+from app.utils import log_endpoint, serialize_row, require_headers_and_echo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ def safe_validate(data, schema):
 @pm_211fz_bp.route('/pm-211fz-v1.3.1/', methods=HTTP_METHODS[:2])
 @swag_from('../docs/pm_211fz.yml')
 @log_endpoint
+@require_headers_and_echo
 def pm_211fz_operations():
     if request.method == 'POST':
         return handle_pm_211fz_creation(request.json)
@@ -88,6 +89,7 @@ def handle_pm_211fz_list():
 @pm_211fz_bp.route('/pm-211fz-v1.3.1/<payment_id>', methods=HTTP_METHODS)
 @swag_from('../docs/pm_211fz.yml')
 @log_endpoint
+@require_headers_and_echo
 def single_pm_211fz(payment_id):
     try:
         payment = get_payment(payment_id)

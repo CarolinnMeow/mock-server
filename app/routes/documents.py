@@ -11,7 +11,7 @@ from app.config import (
     DOCUMENT_TYPES
 )
 from app.db import safe_db_query
-from app.utils import log_endpoint, serialize_row
+from app.utils import log_endpoint, serialize_row, require_headers_and_echo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ def serialize_doc(row):
 @documents_bp.route('/bank-doc-v1.0.1/', methods=HTTP_METHODS[:2])
 @swag_from('../docs/documents.yml')
 @log_endpoint
+@require_headers_and_echo
 def bank_docs():
     if request.method == 'POST':
         error = safe_validate(request.json, bank_doc_schema)
@@ -78,6 +79,7 @@ def bank_docs():
 @documents_bp.route('/bank-doc-v1.0.1/<doc_id>', methods=HTTP_METHODS)
 @swag_from('../docs/documents.yml')
 @log_endpoint
+@require_headers_and_echo
 def bank_doc(doc_id):
     try:
         cur = safe_db_query('SELECT * FROM bank_docs WHERE id = ?', (doc_id,))
@@ -123,6 +125,7 @@ def bank_doc(doc_id):
 @documents_bp.route('/insurance-doc-v1.0.1/', methods=HTTP_METHODS[:2])
 @swag_from('../docs/documents.yml')
 @log_endpoint
+@require_headers_and_echo
 def insurance_docs():
     if request.method == 'POST':
         error = safe_validate(request.json, insurance_doc_schema)
@@ -166,6 +169,7 @@ def insurance_docs():
 @documents_bp.route('/insurance-doc-v1.0.1/<doc_id>', methods=HTTP_METHODS)
 @swag_from('../docs/documents.yml')
 @log_endpoint
+@require_headers_and_echo
 def insurance_doc(doc_id):
     try:
         cur = safe_db_query('SELECT * FROM insurance_docs WHERE id = ?', (doc_id,))

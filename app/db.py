@@ -117,7 +117,7 @@ def fill_test_db():
     # Consents
     for c in TEST_CONSENTS:
         execute_query(
-            '''INSERT INTO consents (id, type, status, tpp_id, permissions, account_id)
+            '''INSERT INTO consents (id, type, status, subject, scope, tpp_id, permissions, account_id)
                VALUES (?, ?, ?, ?, ?, ?)''',
             (
                 str(uuid.uuid4()),
@@ -125,7 +125,9 @@ def fill_test_db():
                 c["status"],
                 c["tpp_id"],
                 json.dumps(c["permissions"]),
-                c["account_id"]
+                c["account_id"],
+                c["subject"],
+                c["scope"]
             ),
             commit=True
         )

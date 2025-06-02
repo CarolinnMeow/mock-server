@@ -12,7 +12,7 @@ from app.config import (
     HTTP_METHODS
 )
 from app.db import execute_query, safe_db_query
-from app.utils import log_endpoint, serialize_row
+from app.utils import log_endpoint, serialize_row, require_headers_and_echo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,6 +42,7 @@ def serialize_consent(row):
 @consents_bp.route('/consent-pe-v2.0.0/', methods=[HTTP_METHODS[1]])  # POST
 @swag_from('../docs/consents.yml')
 @log_endpoint
+@require_headers_and_echo
 def create_pe_consent():
     error = safe_validate(request.json, consent_schema)
     if error:
@@ -76,6 +77,7 @@ def create_pe_consent():
 @consents_bp.route('/consent-le-v2.0.0/', methods=[HTTP_METHODS[1]])  # POST
 @swag_from('../docs/consents.yml')
 @log_endpoint
+@require_headers_and_echo
 def create_le_consent():
     error = safe_validate(request.json, consent_schema)
     if error:
@@ -110,6 +112,7 @@ def create_le_consent():
 @consents_bp.route('/consent-pe-v2.0.0/<consent_id>', methods=HTTP_METHODS)
 @swag_from('../docs/consents.yml')
 @log_endpoint
+@require_headers_and_echo
 def pe_consent(consent_id):
     cur = safe_db_query(
         'SELECT * FROM consents WHERE id = ? AND type = ?',
@@ -166,6 +169,7 @@ def pe_consent(consent_id):
 @consents_bp.route('/consent-le-v2.0.0/<consent_id>', methods=HTTP_METHODS)
 @swag_from('../docs/consents.yml')
 @log_endpoint
+@require_headers_and_echo
 def le_consent(consent_id):
     cur = safe_db_query(
         'SELECT * FROM consents WHERE id = ? AND type = ?',

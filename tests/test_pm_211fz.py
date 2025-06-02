@@ -82,7 +82,7 @@ class TestPM211FZ(unittest.TestCase):
         response = self.client.post('/pm-211fz-v1.3.1/', json=invalid_data)
         self.assertEqual(response.status_code, 400)
         error = response.get_json()
-        self.assertIn("validation_error", error["error"])
+        self.assertIn("Validation error", error["error"])
 
     def test_missing_required_field(self):
         """Тест отсутствия обязательного поля"""
@@ -95,7 +95,7 @@ class TestPM211FZ(unittest.TestCase):
         response = self.client.post('/pm-211fz-v1.3.1/', json=incomplete_data)
         self.assertEqual(response.status_code, 400)
         error = response.get_json()
-        self.assertIn("validation_error", error["error"])
+        self.assertIn("Validation error", error["error"])
 
 
 if __name__ == '__main__':
