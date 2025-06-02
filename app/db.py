@@ -1,6 +1,6 @@
 import sqlite3
 import click
-from flask import current_app, g
+from flask import current_app, g, abort
 
 def get_db():
     if 'db' not in g:
@@ -39,6 +39,14 @@ def init_db(db=None, db_path=None):
     if close:
         db.close()
 
+def safe_db_query(query, params=(), commit=False):
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        return execute_query(query, params, commit)
+    except Exception as e:
+        logger.error(f"DB error: {e}")
+        abort(500, description="Database error")
 
 @click.command('init-db')
 def init_db_command():

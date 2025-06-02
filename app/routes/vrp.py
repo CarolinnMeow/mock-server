@@ -1,12 +1,18 @@
 from flask import Blueprint, jsonify, request
-from flask_api import status
 from jsonschema import ValidationError
 from flasgger import swag_from
 import uuid
 import logging
-from app.config import RESPONSE_MESSAGES, VRP_STATUSES, PAGINATION_CONFIG
-from app.schemas.vrp import vrp_schema
-from app.db import execute_query
+from datetime import datetime
+from app.config import (
+    RESPONSE_MESSAGES,
+    VRP_STATUSES,
+    PAGINATION_CONFIG,
+    HTTP_STATUS_CODES,
+    HTTP_METHODS
+)
+from app.db import safe_db_query
+from app.utils import log_endpoint, serialize_row
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,7 +23,6 @@ vrp_bp = Blueprint('vrp', __name__)
 def safe_validate(data, schema):
     try:
         validate(data, schema)
-        # Дополнительная проверка даты valid_until
         if 'valid_until' in data and data['valid_until'] < datetime.now().isoformat():
             return "Дата valid_until должна быть в будущем"
         return None
@@ -26,119 +31,149 @@ def safe_validate(data, schema):
         return str(e)
 
 
-def serialize_vrp(row):
-    if not row:
-        return {}
-    return dict(row)
-
-
-@vrp_bp.route('/vrp-v1.3.1/', methods=['GET', 'POST'])
+@vrp_bp.route('/vrp-v1.3.1/', methods=HTTP_METHODS[:2])
 @swag_from('../docs/vrp.yml')
+@log_endpoint
 def vrp_operations():
-    logger.info(f"{request.method} {request.path}")
-
     if request.method == 'POST':
-        error = safe_validate(request.json, vrp_schema)
-        if error:
-            return jsonify({
-                "error": RESPONSE_MESSAGES["validation_error"],
-                "message": error
-            }), status.HTTP_400_BAD_REQUEST
+        return handle_vrp_creation(request.json)
+    return handle_vrp_list(request.args)
 
+
+def handle_vrp_creation(data):
+    error = safe_validate(data, vrp_schema)
+    if error:
+        return jsonify({
+            "error": RESPONSE_MESSAGES["validation_error"],
+            "message": error
+        }), HTTP_STATUS_CODES["BAD_REQUEST"]
+
+    try:
         vrp_id = str(uuid.uuid4())
-        result = safe_db_query(
+        safe_db_query(
             '''INSERT INTO vrps 
             (id, status, max_amount, frequency, valid_until, recipient_account)
             VALUES (?, ?, ?, ?, ?, ?)''',
             (
                 vrp_id,
                 VRP_STATUSES["active"],
-                request.json['max_amount'],
-                request.json['frequency'],
-                request.json['valid_until'],
-                request.json['recipient_account']
+                data['max_amount'],
+                data['frequency'],
+                data['valid_until'],
+                data['recipient_account']
             ),
             commit=True
         )
-
-        if not result:
-            return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), status.HTTP_500_INTERNAL_SERVER_ERROR
-
         cur = safe_db_query('SELECT * FROM vrps WHERE id = ?', (vrp_id,))
-        return jsonify(serialize_vrp(cur.fetchone())), status.HTTP_201_CREATED
+        return jsonify(serialize_row(cur.fetchone())), HTTP_STATUS_CODES["CREATED"]
 
-    # GET with pagination
+    except Exception as e:
+        logger.error(f"VRP creation failed: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
+
+
+def handle_vrp_list(args):
     try:
-        page = int(request.args.get('page', 1))
-        page_size = int(request.args.get('page_size', PAGINATION_CONFIG["default_page_size"]))
-        page = max(page, 1)
-        page_size = min(page_size, PAGINATION_CONFIG["max_page_size"])
+        page = int(args.get('page', 1))
+        page_size = int(args.get('page_size', PAGINATION_CONFIG["default_page_size"]))
+        page, page_size = validate_pagination(page, page_size)
         offset = (page - 1) * page_size
     except ValueError:
-        logger.warning("Invalid pagination parameters")
         return jsonify({
             "error": RESPONSE_MESSAGES["validation_error"],
             "message": "Неверные параметры пагинации"
-        }), status.HTTP_400_BAD_REQUEST
+        }), HTTP_STATUS_CODES["BAD_REQUEST"]
 
-    cur = safe_db_query(
-        'SELECT * FROM vrps ORDER BY valid_until DESC LIMIT ? OFFSET ?',
-        (page_size, offset)
-    )
+    try:
+        cur = safe_db_query(
+            'SELECT * FROM vrps ORDER BY valid_until DESC LIMIT ? OFFSET ?',
+            (page_size, offset)
+        )
+        vrps = [serialize_row(row) for row in cur.fetchall()]
 
-    return jsonify({
-        "vrps": [serialize_vrp(row) for row in cur.fetchall()],
-        "pagination": {
-            "page": page,
-            "page_size": page_size,
-            "next_page": f"?page={page + 1}&page_size={page_size}" if cur.rowcount == page_size else None
-        }
-    }), status.HTTP_200_OK
+        return jsonify({
+            "vrps": vrps,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "next_page": f"?page={page + 1}&page_size={page_size}" if len(vrps) == page_size else None
+            }
+        }), HTTP_STATUS_CODES["OK"]
+
+    except Exception as e:
+        logger.error(f"Database error: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
 
 
-@vrp_bp.route('/vrp-v1.3.1/<vrp_id>', methods=['GET', 'PUT', 'DELETE'])
+@vrp_bp.route('/vrp-v1.3.1/<vrp_id>', methods=HTTP_METHODS)
 @swag_from('../docs/vrp.yml')
+@log_endpoint
 def single_vrp(vrp_id):
-    logger.info(f"{request.method} {request.path} | id={vrp_id}")
+    try:
+        vrp = get_vrp(vrp_id)
 
+        if not vrp:
+            return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), HTTP_STATUS_CODES["NOT_FOUND"]
+
+        if request.method == 'PUT':
+            return update_vrp(vrp_id, request.json)
+
+        if request.method == 'DELETE':
+            return delete_vrp(vrp_id)
+
+        return jsonify(serialize_row(vrp)), HTTP_STATUS_CODES["OK"]
+
+    except Exception as e:
+        logger.error(f"VRP operation failed: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["server_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
+
+
+def get_vrp(vrp_id):
     cur = safe_db_query('SELECT * FROM vrps WHERE id = ?', (vrp_id,))
-    vrp = cur.fetchone() if cur else None
+    return cur.fetchone() if cur else None
 
-    if not vrp:
-        return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), status.HTTP_404_NOT_FOUND
 
-    if request.method == 'PUT':
-        error = safe_validate(request.json, vrp_schema)
-        if error:
-            return jsonify({
-                "error": RESPONSE_MESSAGES["validation_error"],
-                "message": error
-            }), status.HTTP_400_BAD_REQUEST
+def update_vrp(vrp_id, data):
+    error = safe_validate(data, vrp_schema)
+    if error:
+        return jsonify({
+            "error": RESPONSE_MESSAGES["validation_error"],
+            "message": error
+        }), HTTP_STATUS_CODES["BAD_REQUEST"]
 
-        result = safe_db_query(
+    try:
+        safe_db_query(
             '''UPDATE vrps SET 
             max_amount = ?, frequency = ?, valid_until = ?, recipient_account = ?
             WHERE id = ?''',
             (
-                request.json['max_amount'],
-                request.json['frequency'],
-                request.json['valid_until'],
-                request.json['recipient_account'],
+                data['max_amount'],
+                data['frequency'],
+                data['valid_until'],
+                data['recipient_account'],
                 vrp_id
             ),
             commit=True
         )
-
-        if not result:
-            return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), status.HTTP_500_INTERNAL_SERVER_ERROR
-
         cur = safe_db_query('SELECT * FROM vrps WHERE id = ?', (vrp_id,))
-        vrp = cur.fetchone()
+        return jsonify(serialize_row(cur.fetchone())), HTTP_STATUS_CODES["OK"]
 
-    elif request.method == 'DELETE':
-        result = safe_db_query('DELETE FROM vrps WHERE id = ?', (vrp_id,), commit=True)
-        if not result:
-            return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), status.HTTP_500_INTERNAL_SERVER_ERROR
-        return '', status.HTTP_204_NO_CONTENT
+    except Exception as e:
+        logger.error(f"VRP update failed: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
 
-    return jsonify(serialize_vrp(vrp)), status.HTTP_200_OK
+
+def delete_vrp(vrp_id):
+    try:
+        safe_db_query('DELETE FROM vrps WHERE id = ?', (vrp_id,), commit=True)
+        return '', HTTP_STATUS_CODES["NO_CONTENT"]
+
+    except Exception as e:
+        logger.error(f"VRP deletion failed: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
+
+
+def validate_pagination(page: int, page_size: int) -> tuple:
+    page = max(page, 1)
+    page_size = min(max(page_size, 1), PAGINATION_CONFIG["max_page_size"])
+    return page, page_size

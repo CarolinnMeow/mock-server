@@ -13,6 +13,16 @@ class TestConfig(Config):
 # HTTP методы
 HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 
+HTTP_STATUS_CODES = {
+    "OK": 200,
+    "CREATED": 201,
+    "BAD_REQUEST": 400,
+    "NOT_FOUND": 404,
+    "METHOD_NOT_ALLOWED": 405,
+    "INTERNAL_SERVER_ERROR": 500,
+    "NO_CONTENT": 204
+}
+
 SYSTEM_CONFIG = {
     "api_version": "1.0.0",
     "allowed_error_codes": [400, 401, 403, 404, 500, 502, 503],

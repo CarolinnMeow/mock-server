@@ -1,5 +1,4 @@
-from flask import Blueprint, jsonify, request, abort
-from flask_api import status
+from flask import Blueprint, jsonify, request
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from flasgger import swag_from
@@ -7,13 +6,20 @@ import uuid
 import logging
 from app.db import execute_query
 from app.schemas.account import physical_account_schema, legal_account_schema
-from app.config import ACCOUNT_TYPES, HTTP_METHODS, RESPONSE_MESSAGES
+from app.config import (
+    ACCOUNT_TYPES,
+    HTTP_METHODS,
+    RESPONSE_MESSAGES,
+    HTTP_STATUS_CODES
+)
+from app.utils import log_endpoint
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 accounts_bp = Blueprint('accounts', __name__)
+
 
 def safe_validate(data, schema):
     try:
@@ -23,28 +29,34 @@ def safe_validate(data, schema):
         logger.warning(f"Validation error: {e}")
         return str(e)
 
+
 def safe_db_query(query, params=(), commit=False):
     try:
         return execute_query(query, params, commit)
     except Exception as e:
         logger.error(f"DB error: {e}")
-        abort(status.HTTP_500_INTERNAL_SERVER_ERROR, description=RESPONSE_MESSAGES["db_error"])
+        abort(HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"],
+              description=RESPONSE_MESSAGES["db_error"])
 
-@accounts_bp.route('/accounts-v1.3.3/', methods=['GET', 'POST'])
+
+@accounts_bp.route('/accounts-v1.3.3/', methods=HTTP_METHODS[:2])  # GET, POST
 @swag_from('../docs/accounts.yml')
+@log_endpoint
 def physical_accounts():
-    logger.info(f"{request.method} {request.path}")
     if request.method == 'GET':
         cur = safe_db_query(
             'SELECT * FROM accounts WHERE type = ?',
             (ACCOUNT_TYPES["physical"],)
         )
-        return jsonify([dict(row) for row in cur.fetchall()]), status.HTTP_200_OK
+        return jsonify([dict(row) for row in cur.fetchall()]), HTTP_STATUS_CODES["OK"]
 
     if request.method == 'POST':
         error = safe_validate(request.json, physical_account_schema)
         if error:
-            return jsonify({"error": RESPONSE_MESSAGES["validation_error"], "message": error}), status.HTTP_400_BAD_REQUEST
+            return jsonify({
+                "error": RESPONSE_MESSAGES["validation_error"],
+                "message": error
+            }), HTTP_STATUS_CODES["BAD_REQUEST"]
 
         account_id = str(uuid.uuid4())
         safe_db_query(
@@ -61,14 +73,15 @@ def physical_accounts():
             commit=True
         )
         cur = safe_db_query('SELECT * FROM accounts WHERE id = ?', (account_id,))
-        return jsonify(dict(cur.fetchone())), status.HTTP_201_CREATED
+        return jsonify(dict(cur.fetchone())), HTTP_STATUS_CODES["CREATED"]
 
-    return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), status.HTTP_405_METHOD_NOT_ALLOWED
+    return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), HTTP_STATUS_CODES["METHOD_NOT_ALLOWED"]
 
-@accounts_bp.route('/accounts-v1.3.3/<account_id>', methods=['GET', 'PUT', 'DELETE'])
+
+@accounts_bp.route('/accounts-v1.3.3/<account_id>', methods=HTTP_METHODS)
 @swag_from('../docs/accounts.yml')
+@log_endpoint
 def physical_account(account_id):
-    logger.info(f"{request.method} {request.path} | id={account_id}")
     if request.method == 'GET':
         cur = safe_db_query(
             'SELECT * FROM accounts WHERE id = ? AND type = ?',
@@ -76,13 +89,17 @@ def physical_account(account_id):
         )
         account = cur.fetchone()
         if not account:
-            return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), status.HTTP_404_NOT_FOUND
-        return jsonify(dict(account)), status.HTTP_200_OK
+            return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), HTTP_STATUS_CODES["NOT_FOUND"]
+        return jsonify(dict(account)), HTTP_STATUS_CODES["OK"]
 
     if request.method == 'PUT':
         error = safe_validate(request.json, physical_account_schema)
         if error:
-            return jsonify({"error": RESPONSE_MESSAGES["validation_error"], "message": error}), status.HTTP_400_BAD_REQUEST
+            return jsonify({
+                "error": RESPONSE_MESSAGES["validation_error"],
+                "message": error
+            }), HTTP_STATUS_CODES["BAD_REQUEST"]
+
         safe_db_query(
             '''UPDATE accounts SET balance = ?, currency = ?, status = ?, owner = ?
                WHERE id = ? AND type = ?''',
@@ -96,7 +113,7 @@ def physical_account(account_id):
             ),
             commit=True
         )
-        return jsonify({"status": "updated"}), status.HTTP_200_OK
+        return jsonify({"status": "updated"}), HTTP_STATUS_CODES["OK"]
 
     if request.method == 'DELETE':
         safe_db_query(
@@ -104,25 +121,29 @@ def physical_account(account_id):
             (account_id, ACCOUNT_TYPES["physical"]),
             commit=True
         )
-        return '', status.HTTP_204_NO_CONTENT
+        return '', HTTP_STATUS_CODES["NO_CONTENT"]
 
-    return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), status.HTTP_405_METHOD_NOT_ALLOWED
+    return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), HTTP_STATUS_CODES["METHOD_NOT_ALLOWED"]
 
-@accounts_bp.route('/accounts-le-v2.0.0/', methods=['GET', 'POST'])
+
+@accounts_bp.route('/accounts-le-v2.0.0/', methods=HTTP_METHODS[:2])  # GET, POST
 @swag_from('../docs/accounts.yml')
+@log_endpoint
 def legal_accounts():
-    logger.info(f"{request.method} {request.path}")
     if request.method == 'GET':
         cur = safe_db_query(
             'SELECT * FROM accounts WHERE type = ?',
             (ACCOUNT_TYPES["legal"],)
         )
-        return jsonify([dict(row) for row in cur.fetchall()]), status.HTTP_200_OK
+        return jsonify([dict(row) for row in cur.fetchall()]), HTTP_STATUS_CODES["OK"]
 
     if request.method == 'POST':
         error = safe_validate(request.json, legal_account_schema)
         if error:
-            return jsonify({"error": RESPONSE_MESSAGES["validation_error"], "message": error}), status.HTTP_400_BAD_REQUEST
+            return jsonify({
+                "error": RESPONSE_MESSAGES["validation_error"],
+                "message": error
+            }), HTTP_STATUS_CODES["BAD_REQUEST"]
 
         account_id = str(uuid.uuid4())
         safe_db_query(
@@ -139,14 +160,15 @@ def legal_accounts():
             commit=True
         )
         cur = safe_db_query('SELECT * FROM accounts WHERE id = ?', (account_id,))
-        return jsonify(dict(cur.fetchone())), status.HTTP_201_CREATED
+        return jsonify(dict(cur.fetchone())), HTTP_STATUS_CODES["CREATED"]
 
-    return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), status.HTTP_405_METHOD_NOT_ALLOWED
+    return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), HTTP_STATUS_CODES["METHOD_NOT_ALLOWED"]
 
-@accounts_bp.route('/accounts-le-v2.0.0/<account_id>', methods=['GET', 'PUT', 'DELETE'])
+
+@accounts_bp.route('/accounts-le-v2.0.0/<account_id>', methods=HTTP_METHODS)
 @swag_from('../docs/accounts.yml')
+@log_endpoint
 def legal_account(account_id):
-    logger.info(f"{request.method} {request.path} | id={account_id}")
     if request.method == 'GET':
         cur = safe_db_query(
             'SELECT * FROM accounts WHERE id = ? AND type = ?',
@@ -154,13 +176,17 @@ def legal_account(account_id):
         )
         account = cur.fetchone()
         if not account:
-            return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), status.HTTP_404_NOT_FOUND
-        return jsonify(dict(account)), status.HTTP_200_OK
+            return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), HTTP_STATUS_CODES["NOT_FOUND"]
+        return jsonify(dict(account)), HTTP_STATUS_CODES["OK"]
 
     if request.method == 'PUT':
         error = safe_validate(request.json, legal_account_schema)
         if error:
-            return jsonify({"error": RESPONSE_MESSAGES["validation_error"], "message": error}), status.HTTP_400_BAD_REQUEST
+            return jsonify({
+                "error": RESPONSE_MESSAGES["validation_error"],
+                "message": error
+            }), HTTP_STATUS_CODES["BAD_REQUEST"]
+
         safe_db_query(
             '''UPDATE accounts SET balance = ?, currency = ?, status = ?, company = ?
                WHERE id = ? AND type = ?''',
@@ -174,7 +200,7 @@ def legal_account(account_id):
             ),
             commit=True
         )
-        return jsonify({"status": "updated"}), status.HTTP_200_OK
+        return jsonify({"status": "updated"}), HTTP_STATUS_CODES["OK"]
 
     if request.method == 'DELETE':
         safe_db_query(
@@ -182,6 +208,6 @@ def legal_account(account_id):
             (account_id, ACCOUNT_TYPES["legal"]),
             commit=True
         )
-        return '', status.HTTP_204_NO_CONTENT
+        return '', HTTP_STATUS_CODES["NO_CONTENT"]
 
-    return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), status.HTTP_405_METHOD_NOT_ALLOWED
+    return jsonify({"error": RESPONSE_MESSAGES["method_not_allowed"]}), HTTP_STATUS_CODES["METHOD_NOT_ALLOWED"]

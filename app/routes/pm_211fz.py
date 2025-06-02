@@ -1,12 +1,17 @@
 from flask import Blueprint, jsonify, request
-from flask_api import status
 from jsonschema import ValidationError
 from flasgger import swag_from
 import uuid
 import logging
-from app.config import RESPONSE_MESSAGES, PAYMENT_STATUSES, PAYMENT_TYPES
-from app.schemas.pm_211fz import pm_211fz_schema
-from app.db import execute_query
+from app.config import (
+    RESPONSE_MESSAGES,
+    PAYMENT_STATUSES,
+    PAYMENT_TYPES,
+    HTTP_STATUS_CODES,
+    HTTP_METHODS
+)
+from app.db import safe_db_query
+from app.utils import log_endpoint, serialize_row
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,33 +28,27 @@ def safe_validate(data, schema):
         return str(e)
 
 
-def safe_db_query(query, params=(), commit=False):
-    try:
-        return execute_query(query, params, commit)
-    except Exception as e:
-        logger.error(f"PM 211-FZ DB error: {e}")
-        return None
-
-
-def serialize_payment(row):
-    return dict(row) if row else {}
-
-
-@pm_211fz_bp.route('/pm-211fz-v1.3.1/', methods=['GET', 'POST'])
+@pm_211fz_bp.route('/pm-211fz-v1.3.1/', methods=HTTP_METHODS[:2])
 @swag_from('../docs/pm_211fz.yml')
-def pm_211fz():
-    logger.info(f"{request.method} {request.path}")
-
+@log_endpoint
+def pm_211fz_operations():
     if request.method == 'POST':
-        error = safe_validate(request.json, pm_211fz_schema)
-        if error:
-            return jsonify({
-                "error": RESPONSE_MESSAGES["validation_error"],
-                "message": error
-            }), status.HTTP_400_BAD_REQUEST
+        return handle_pm_211fz_creation(request.json)
 
+    return handle_pm_211fz_list()
+
+
+def handle_pm_211fz_creation(data):
+    error = safe_validate(data, pm_211fz_schema)
+    if error:
+        return jsonify({
+            "error": RESPONSE_MESSAGES["validation_error"],
+            "message": error
+        }), HTTP_STATUS_CODES["BAD_REQUEST"]
+
+    try:
         payment_id = str(uuid.uuid4())
-        result = safe_db_query(
+        safe_db_query(
             '''INSERT INTO payments 
             (id, status, type, amount, currency, recipient, purpose, budget_code, created_at, account_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)''',
@@ -57,78 +56,104 @@ def pm_211fz():
                 payment_id,
                 PAYMENT_STATUSES["pending"],
                 PAYMENT_TYPES["pm_211fz"],
-                request.json['amount'],
-                request.json['currency'],
-                request.json['recipient'],
-                request.json['purpose'],
-                request.json['budget_code'],
-                request.json['account_id']
+                data['amount'],
+                data['currency'],
+                data['recipient'],
+                data['purpose'],
+                data['budget_code'],
+                data['account_id']
             ),
             commit=True
         )
-
-        if not result:
-            return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), status.HTTP_500_INTERNAL_SERVER_ERROR
-
         cur = safe_db_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
-        return jsonify(serialize_payment(cur.fetchone())), status.HTTP_201_CREATED
+        return jsonify(serialize_row(cur.fetchone())), HTTP_STATUS_CODES["CREATED"]
 
-    # GET
-    cur = safe_db_query('SELECT * FROM payments WHERE type = ?', (PAYMENT_TYPES["pm_211fz"],))
-    payments = [serialize_payment(row) for row in cur.fetchall()] if cur else []
-    return jsonify(payments), status.HTTP_200_OK
+    except Exception as e:
+        logger.error(f"Payment creation failed: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
 
 
-@pm_211fz_bp.route('/pm-211fz-v1.3.1/<payment_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_pm_211fz_list():
+    try:
+        cur = safe_db_query('SELECT * FROM payments WHERE type = ?', (PAYMENT_TYPES["pm_211fz"],))
+        payments = [serialize_row(row) for row in cur.fetchall()] if cur else []
+        return jsonify(payments), HTTP_STATUS_CODES["OK"]
+
+    except Exception as e:
+        logger.error(f"Payment list retrieval failed: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
+
+
+@pm_211fz_bp.route('/pm-211fz-v1.3.1/<payment_id>', methods=HTTP_METHODS)
 @swag_from('../docs/pm_211fz.yml')
+@log_endpoint
 def single_pm_211fz(payment_id):
-    logger.info(f"{request.method} {request.path} | id={payment_id}")
+    try:
+        payment = get_payment(payment_id)
 
+        if not payment:
+            return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), HTTP_STATUS_CODES["NOT_FOUND"]
+
+        if request.method == 'PUT':
+            return update_pm_211fz(payment_id, request.json)
+
+        if request.method == 'DELETE':
+            return delete_pm_211fz(payment_id)
+
+        return jsonify(serialize_row(payment)), HTTP_STATUS_CODES["OK"]
+
+    except Exception as e:
+        logger.error(f"Payment operation failed: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["server_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
+
+
+def get_payment(payment_id):
     cur = safe_db_query(
         'SELECT * FROM payments WHERE id = ? AND type = ?',
         (payment_id, PAYMENT_TYPES["pm_211fz"])
     )
-    payment = cur.fetchone() if cur else None
+    return cur.fetchone() if cur else None
 
-    if not payment:
-        return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), status.HTTP_404_NOT_FOUND
 
-    if request.method == 'PUT':
-        error = safe_validate(request.json, pm_211fz_schema)
-        if error:
-            return jsonify({
-                "error": RESPONSE_MESSAGES["validation_error"],
-                "message": error
-            }), status.HTTP_400_BAD_REQUEST
+def update_pm_211fz(payment_id, data):
+    error = safe_validate(data, pm_211fz_schema)
+    if error:
+        return jsonify({
+            "error": RESPONSE_MESSAGES["validation_error"],
+            "message": error
+        }), HTTP_STATUS_CODES["BAD_REQUEST"]
 
-        result = safe_db_query(
+    try:
+        safe_db_query(
             '''UPDATE payments SET 
             amount = ?, currency = ?, recipient = ? 
             WHERE id = ? AND type = ?''',
             (
-                request.json['amount'],
-                request.json['currency'],
-                request.json['recipient'],
+                data['amount'],
+                data['currency'],
+                data['recipient'],
                 payment_id,
                 PAYMENT_TYPES["pm_211fz"]
             ),
             commit=True
         )
-
-        if not result:
-            return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), status.HTTP_500_INTERNAL_SERVER_ERROR
-
         cur = safe_db_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
-        payment = cur.fetchone()
+        return jsonify(serialize_row(cur.fetchone())), HTTP_STATUS_CODES["OK"]
 
-    elif request.method == 'DELETE':
-        result = safe_db_query(
+    except Exception as e:
+        logger.error(f"Payment update failed: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
+
+
+def delete_pm_211fz(payment_id):
+    try:
+        safe_db_query(
             'DELETE FROM payments WHERE id = ? AND type = ?',
             (payment_id, PAYMENT_TYPES["pm_211fz"]),
             commit=True
         )
-        if not result:
-            return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), status.HTTP_500_INTERNAL_SERVER_ERROR
-        return '', status.HTTP_204_NO_CONTENT
+        return '', HTTP_STATUS_CODES["NO_CONTENT"]
 
-    return jsonify(serialize_payment(payment)), status.HTTP_200_OK
+    except Exception as e:
+        logger.error(f"Payment deletion failed: {str(e)}")
+        return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), HTTP_STATUS_CODES["INTERNAL_SERVER_ERROR"]
