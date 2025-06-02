@@ -1,28 +1,62 @@
-from flask import Blueprint, jsonify, request, abort, g
-from app.schemas.payment import payment_schema
-from jsonschema import validate
-from app.db import execute_query
-from flasgger import Swagger, swag_from
+from flask import Blueprint, jsonify, request
+from flask_api import status
+from jsonschema import ValidationError
+from flasgger import swag_from
 import uuid
 from datetime import datetime
+import logging
+from app.config import RESPONSE_MESSAGES, PAYMENT_STATUSES
+from app.schemas.payment import payment_schema
+from app.db import execute_query
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 payments_bp = Blueprint('payments', __name__)
-DATABASE = 'mockserver.db'
 
-@swag_from('../docs/payments.yml')
+
+def safe_validate(data, schema):
+    try:
+        validate(data, schema)
+        return None
+    except ValidationError as e:
+        logger.warning(f"Payment validation error: {e}")
+        return str(e)
+
+
+def safe_db_query(query, params=(), commit=False):
+    try:
+        return execute_query(query, params, commit)
+    except Exception as e:
+        logger.error(f"Payment DB error: {e}")
+        return None
+
+
+def serialize_payment(row):
+    return dict(row) if row else {}
+
 
 @payments_bp.route('/payments-v1.3.1/', methods=['POST'])
+@swag_from('../docs/payments.yml')
 def create_payment():
-    validate(request.json, payment_schema)
+    logger.info(f"POST {request.path}")
+
+    error = safe_validate(request.json, payment_schema)
+    if error:
+        return jsonify({
+            "error": RESPONSE_MESSAGES["validation_error"],
+            "message": error
+        }), status.HTTP_400_BAD_REQUEST
+
     payment_id = str(uuid.uuid4())
-    created_at = datetime.now().isoformat()
-    execute_query(
-        '''INSERT INTO payments (id, status, created_at, amount, currency, recipient, account_id)
+    result = safe_db_query(
+        '''INSERT INTO payments 
+           (id, status, created_at, amount, currency, recipient, account_id)
            VALUES (?, ?, ?, ?, ?, ?, ?)''',
         (
             payment_id,
-            "PENDING",
-            created_at,
+            PAYMENT_STATUSES["pending"],
+            datetime.now().isoformat(),
             request.json['amount'],
             request.json['currency'],
             request.json['recipient'],
@@ -30,22 +64,37 @@ def create_payment():
         ),
         commit=True
     )
-    cur = execute_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
-    payment = dict(cur.fetchone())
-    return jsonify(payment), 201
+
+    if not result:
+        return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    cur = safe_db_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
+    return jsonify(serialize_payment(cur.fetchone())), status.HTTP_201_CREATED
 
 
 @payments_bp.route('/payments-v1.3.1/<payment_id>', methods=['GET', 'PUT', 'DELETE'])
 @swag_from('../docs/payments.yml')
 def payment_operations(payment_id):
-    cur = execute_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
-    payment = cur.fetchone()
+    logger.info(f"{request.method} {request.path} | id={payment_id}")
+
+    cur = safe_db_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
+    payment = cur.fetchone() if cur else None
+
     if not payment:
-        abort(404)
+        return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), status.HTTP_404_NOT_FOUND
+
     if request.method == 'PUT':
-        validate(request.json, payment_schema)
-        execute_query(
-            '''UPDATE payments SET amount = ?, currency = ?, recipient = ? WHERE id = ?''',
+        error = safe_validate(request.json, payment_schema)
+        if error:
+            return jsonify({
+                "error": RESPONSE_MESSAGES["validation_error"],
+                "message": error
+            }), status.HTTP_400_BAD_REQUEST
+
+        result = safe_db_query(
+            '''UPDATE payments 
+               SET amount = ?, currency = ?, recipient = ? 
+               WHERE id = ?''',
             (
                 request.json['amount'],
                 request.json['currency'],
@@ -54,9 +103,17 @@ def payment_operations(payment_id):
             ),
             commit=True
         )
-        cur = execute_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
+
+        if not result:
+            return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        cur = safe_db_query('SELECT * FROM payments WHERE id = ?', (payment_id,))
         payment = cur.fetchone()
+
     elif request.method == 'DELETE':
-        execute_query('DELETE FROM payments WHERE id = ?', (payment_id,), commit=True)
-        return '', 204
-    return jsonify(dict(payment))
+        result = safe_db_query('DELETE FROM payments WHERE id = ?', (payment_id,), commit=True)
+        if not result:
+            return jsonify({"error": RESPONSE_MESSAGES["db_error"]}), status.HTTP_500_INTERNAL_SERVER_ERROR
+        return '', status.HTTP_204_NO_CONTENT
+
+    return jsonify(serialize_payment(payment)), status.HTTP_200_OK

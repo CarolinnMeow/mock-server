@@ -1,74 +1,111 @@
-from flask import Blueprint, jsonify, request, abort, g
+from flask import Blueprint, jsonify, request, abort
+from flask_api import status
 from app.schemas.consent import consent_schema
-from jsonschema import validate
-from flasgger import Swagger, swag_from
+from jsonschema import validate, ValidationError
+from flasgger import swag_from
 from app.db import execute_query
 import uuid
 import json
+import logging
+from app.config import CONSENT_TYPES, RESPONSE_MESSAGES
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 consents_bp = Blueprint('consents', __name__)
-DATABASE = 'mockserver.db'
+
+def safe_validate(data, schema):
+    try:
+        validate(data, schema)
+        return None
+    except ValidationError as e:
+        logger.warning(f"Validation error: {e}")
+        return str(e)
+
+def safe_db_query(query, params=(), commit=False):
+    try:
+        return execute_query(query, params, commit)
+    except Exception as e:
+        logger.error(f"DB error: {e}")
+        abort(status.HTTP_500_INTERNAL_SERVER_ERROR, description="Database error")
+
+def serialize_consent(row):
+    result = dict(row)
+    result['permissions'] = json.loads(result['permissions']) if result.get('permissions') else []
+    return result
 
 @swag_from('../docs/consents.yml')
-
 @consents_bp.route('/consent-pe-v2.0.0/', methods=['POST'])
 def create_pe_consent():
-    validate(request.json, consent_schema)
+    logger.info(f"POST {request.path}")
+    error = safe_validate(request.json, consent_schema)
+    if error:
+        return jsonify({"error": RESPONSE_MESSAGES["validation_error"], "message": error}), status.HTTP_400_BAD_REQUEST
+
     consent_id = str(uuid.uuid4())
     consent = {
         "id": consent_id,
-        "type": "physical_entity",
+        "type": CONSENT_TYPES["physical"],
         "status": "ACTIVE",
         **request.json
     }
-    execute_query(
+    safe_db_query(
         '''INSERT INTO consents (id, type, status, tpp_id, permissions) VALUES (?, ?, ?, ?, ?)''',
         (
             consent_id,
-            "physical_entity",
+            CONSENT_TYPES["physical"],
             "ACTIVE",
             consent.get('tpp_id'),
             json.dumps(consent.get('permissions', []))
         ),
         commit=True
     )
-    return jsonify(consent), 201
+    return jsonify(consent), status.HTTP_201_CREATED
 
 @consents_bp.route('/consent-le-v2.0.0/', methods=['POST'])
 @swag_from('../docs/consents.yml')
 def create_le_consent():
-    validate(request.json, consent_schema)
+    logger.info(f"POST {request.path}")
+    error = safe_validate(request.json, consent_schema)
+    if error:
+        return jsonify({"error": RESPONSE_MESSAGES["validation_error"], "message": error}), status.HTTP_400_BAD_REQUEST
+
     consent_id = str(uuid.uuid4())
     consent = {
         "id": consent_id,
-        "type": "legal_entity",
+        "type": CONSENT_TYPES["legal"],
         "status": "ACTIVE",
         **request.json
     }
-    execute_query(
+    safe_db_query(
         '''INSERT INTO consents (id, type, status, tpp_id, permissions) VALUES (?, ?, ?, ?, ?)''',
         (
             consent_id,
-            "legal_entity",
+            CONSENT_TYPES["legal"],
             "ACTIVE",
             consent.get('tpp_id'),
             json.dumps(consent.get('permissions', []))
         ),
         commit=True
     )
-    return jsonify(consent), 201
+    return jsonify(consent), status.HTTP_201_CREATED
 
 @consents_bp.route('/consent-pe-v2.0.0/<consent_id>', methods=['GET', 'PUT', 'DELETE'])
 @swag_from('../docs/consents.yml')
 def pe_consent(consent_id):
-    cur = execute_query(
-        'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'physical_entity')
+    logger.info(f"{request.method} {request.path} | id={consent_id}")
+    cur = safe_db_query(
+        'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, CONSENT_TYPES["physical"])
     )
     consent = cur.fetchone()
     if not consent:
-        abort(404)
+        return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), status.HTTP_404_NOT_FOUND
+
     if request.method == 'PUT':
-        # Обновляем только разрешённые поля
+        error = safe_validate(request.json, consent_schema)
+        if error:
+            return jsonify({"error": RESPONSE_MESSAGES["validation_error"], "message": error}), status.HTTP_400_BAD_REQUEST
+
         fields = []
         values = []
         for key in ['status', 'tpp_id', 'permissions']:
@@ -79,36 +116,40 @@ def pe_consent(consent_id):
                     val = json.dumps(val)
                 values.append(val)
         if fields:
-            values.extend([consent_id, 'physical_entity'])
-            execute_query(
+            values.extend([consent_id, CONSENT_TYPES["physical"]])
+            safe_db_query(
                 f"UPDATE consents SET {', '.join(fields)} WHERE id = ? AND type = ?",
                 values,
                 commit=True
             )
-        cur = execute_query(
-            'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'physical_entity')
+        cur = safe_db_query(
+            'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, CONSENT_TYPES["physical"])
         )
         consent = cur.fetchone()
     elif request.method == 'DELETE':
-        execute_query(
-            'DELETE FROM consents WHERE id = ? AND type = ?', (consent_id, 'physical_entity'), commit=True
+        safe_db_query(
+            'DELETE FROM consents WHERE id = ? AND type = ?', (consent_id, CONSENT_TYPES["physical"]), commit=True
         )
-        return '', 204
-    # Преобразуем permissions обратно в список
-    result = dict(consent)
-    result['permissions'] = json.loads(result['permissions']) if result['permissions'] else []
-    return jsonify(result)
+        return '', status.HTTP_204_NO_CONTENT
+
+    return jsonify(serialize_consent(consent)), status.HTTP_200_OK
 
 @consents_bp.route('/consent-le-v2.0.0/<consent_id>', methods=['GET', 'PUT', 'DELETE'])
 @swag_from('../docs/consents.yml')
 def le_consent(consent_id):
-    cur = execute_query(
-        'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'legal_entity')
+    logger.info(f"{request.method} {request.path} | id={consent_id}")
+    cur = safe_db_query(
+        'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, CONSENT_TYPES["legal"])
     )
     consent = cur.fetchone()
     if not consent:
-        abort(404)
+        return jsonify({"error": RESPONSE_MESSAGES["not_found"]}), status.HTTP_404_NOT_FOUND
+
     if request.method == 'PUT':
+        error = safe_validate(request.json, consent_schema)
+        if error:
+            return jsonify({"error": RESPONSE_MESSAGES["validation_error"], "message": error}), status.HTTP_400_BAD_REQUEST
+
         fields = []
         values = []
         for key in ['status', 'tpp_id', 'permissions']:
@@ -119,21 +160,20 @@ def le_consent(consent_id):
                     val = json.dumps(val)
                 values.append(val)
         if fields:
-            values.extend([consent_id, 'legal_entity'])
-            execute_query(
+            values.extend([consent_id, CONSENT_TYPES["legal"]])
+            safe_db_query(
                 f"UPDATE consents SET {', '.join(fields)} WHERE id = ? AND type = ?",
                 values,
                 commit=True
             )
-        cur = execute_query(
-            'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, 'legal_entity')
+        cur = safe_db_query(
+            'SELECT * FROM consents WHERE id = ? AND type = ?', (consent_id, CONSENT_TYPES["legal"])
         )
         consent = cur.fetchone()
     elif request.method == 'DELETE':
-        execute_query(
-            'DELETE FROM consents WHERE id = ? AND type = ?', (consent_id, 'legal_entity'), commit=True
+        safe_db_query(
+            'DELETE FROM consents WHERE id = ? AND type = ?', (consent_id, CONSENT_TYPES["legal"]), commit=True
         )
-        return '', 204
-    result = dict(consent)
-    result['permissions'] = json.loads(result['permissions']) if result['permissions'] else []
-    return jsonify(result)
+        return '', status.HTTP_204_NO_CONTENT
+
+    return jsonify(serialize_consent(consent)), status.HTTP_200_OK
